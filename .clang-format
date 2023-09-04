@@ -1,0 +1,101 @@
+AlignAfterOpenBracket: DontAlign
+
+AlignArrayOfStructures: None
+PackConstructorInitializers: BinPack
+
+AlignConsecutiveAssignments: None
+AlignConsecutiveBitFields: None
+AlignConsecutiveDeclarations: None
+AlignConsecutiveMacros: None
+AlignEscapedNewlines: DontAlign
+AlignOperands: DontAlign
+AlignTrailingComments: false
+
+AllowAllArgumentsOnNextLine: true
+AllowAllParametersOfDeclarationOnNextLine: true
+
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakAfterReturnType: None
+AlwaysBreakBeforeMultilineStrings: true
+
+BinPackArguments: true
+BinPackParameters: true
+
+BitFieldColonSpacing: Both
+
+# clang-format 17
+# BracedInitializerIndentWidth: 4
+
+BreakBeforeBinaryOperators: None
+BreakBeforeBraces: Attach
+BreakBeforeTernaryOperators: true
+
+ColumnLimit: 100
+
+ContinuationIndentWidth: 8
+
+DisableFormat: false
+
+IncludeBlocks: Regroup
+IncludeCategories:
+    - Regex: "^<wlr/"
+      Priority: -1
+    - Regex: "^<"
+      Priority: -2
+    - Regex: ".*"
+      Priority: 0
+
+IndentCaseBlocks: false
+IndentCaseLabels: false
+IndentGotoLabels: false
+IndentPPDirectives: None
+
+IndentWidth: 4
+
+IndentWrappedFunctionNames: false
+
+InsertBraces: true
+
+#InsertNewlineAtEOF: true
+
+KeepEmptyLinesAtTheStartOfBlocks: false
+
+Language: Cpp
+
+#LineEnding: LF
+
+MaxEmptyLinesToKeep: 1
+
+PointerAlignment: Right
+
+ReflowComments: true
+
+#RemoveSemicolon: true
+
+SortIncludes: CaseSensitive
+
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+SpaceAroundPointerQualifiers: Default
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCaseColon: false
+SpaceBeforeParens: ControlStatements
+SpaceBeforeSquareBrackets: false
+SpaceInEmptyBlock: false
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 1
+SpacesInCStyleCastParentheses: false
+SpacesInConditionalStatement: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+
+TabWidth: 4
+
+UseTab: Always
+
+

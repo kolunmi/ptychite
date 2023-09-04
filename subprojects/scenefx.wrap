@@ -1,0 +1,5 @@
+[wrap-git]
+directory = scenefx
+url = https://github.com/wlrfx/scenefx.git
+revision = b929a2bbadf467864796ad4ec90882ce86cfebff
+depth = 1

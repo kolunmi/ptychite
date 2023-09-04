@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<protocol name="ptychite_message_unstable_v1">
+  <copyright>
+  </copyright>
+
+  <interface name="zptychite_message_v1" version="1">
+    <description summary="send and recieve messages to and from the compositor">
+    </description>
+
+    <request name="destroy" type="destructor">
+      <description summary="destroy the ptychite_message object">
+      </description>
+    </request>
+
+    <request name="set_property">
+      <description summary="set a property with a json string">
+      </description>
+      <arg name="path" type="string" summary="the property path"/>
+      <arg name="string" type="string" summary="the desired value"/>
+      <arg name="mode" type="uint" enum="property_set_mode" summary="setting mode"/>
+      <arg name="callback" type="new_id" interface="zptychite_message_callback_v1" summary="callback object"/>
+    </request>
+
+    <request name="get_property">
+      <description summary="get a property as a json string">
+      </description>
+      <arg name="path" type="string" summary="the property path"/>
+      <arg name="mode" type="uint" enum="property_get_mode" summary="getting mode"/>
+      <arg name="callback" type="new_id" interface="zptychite_message_callback_v1" summary="callback object"/>
+    </request>
+
+    <request name="dump_views">
+      <description summary="get a list of all views">
+      </description>
+      <arg name="output" type="object" interface="wl_output" allow-null="true" summary="output to restrict views to"/>
+      <arg name="mode" type="uint" enum="property_get_mode" summary="getting mode"/>
+      <arg name="callback" type="new_id" interface="zptychite_message_callback_v1" summary="callback object"/>
+    </request>
+
+    <enum name="property_set_mode">
+      <entry name="append" value="0" summary="retain existing values where applicable"/>
+      <entry name="overwrite" value="1" summary="delete existing values where applicable"/>
+    </enum>
+
+    <enum name="json_get_mode">
+      <entry name="pretty" value="0" summary="pretty-print json output"/>
+      <entry name="compact" value="1" summary="remove whitespace from json output"/>
+    </enum>
+  </interface>
+
+  <interface name="zptychite_message_callback_v1" version="1">
+    <description summary="callback object">
+    </description>
+
+    <event name="success" type="destructor">
+      <description summary="">
+      </description>
+      <arg name="message" type="string" summary="the message data"/>
+    </event>
+
+    <event name="failure" type="destructor">
+      <description summary="">
+      </description>
+      <arg name="error" type="string" summary="an error string"/>
+    </event>
+  </interface>
+</protocol>
