@@ -1,4 +1,4 @@
-![ptychite](/ptychite.png "ptychite")
+<img src="/ptychite.png" width=50% height=50%>
 
 # Ptychite
 A flexible, approachable, and powerful wayland compositor. This project is not currently usable as a daily driver, but will be soon!
