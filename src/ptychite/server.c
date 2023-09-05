@@ -2125,6 +2125,8 @@ static void server_update_monitors(struct ptychite_server *server) {
 			}
 		}
 
+		monitor_tile(monitor);
+
 		if (output_config) {
 			struct wlr_output_configuration_head_v1 *head =
 					wlr_output_configuration_head_v1_create(output_config, monitor->output);
@@ -2135,11 +2137,10 @@ static void server_update_monitors(struct ptychite_server *server) {
 				head->state.y = monitor->geometry.y;
 			}
 		}
+	}
 
-		struct view *view;
-		wl_list_for_each(view, &server->active_monitor->views, monitor_link) {
-			wlr_surface_send_enter(view->xdg_toplevel->base->surface, monitor->output);
-		}
+	if (server->control->base.element.scene_tree->node.enabled) {
+		control_draw_auto(server->control);
 	}
 
 	wlr_output_manager_v1_set_configuration(server->output_mgr, output_config);
