@@ -9,13 +9,6 @@
 		},
 		"chords":[
 			{
-				"pattern":"M-Return",
-				"action":[
-					"spawn",
-					"foot"
-				]
-			},
-			{
 				"pattern":"Sh-S-Q",
 				"action":[
 					"terminate"
