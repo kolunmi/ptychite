@@ -635,7 +635,7 @@ static int cairo_get_text_size(cairo_t *cairo, PangoFontDescription *font, const
 	return 0;
 }
 
-static int cairo_draw_text_center(cairo_t *cairo, int y, int geom_x, int geom_width,
+static int cairo_draw_text_center(cairo_t *cairo, int y, int geom_x, int geom_width, int *x_out,
 		PangoFontDescription *font, const char *text, float foreground[4], float background[4],
 		double scale, bool markup, int *width, int *height) {
 	int w, h;
@@ -649,6 +649,9 @@ static int cairo_draw_text_center(cairo_t *cairo, int y, int geom_x, int geom_wi
 
 		int x = geom_x + (geom_width - w) / 2;
 		cairo_move_to(cairo, x, y);
+		if (x_out) {
+			*x_out = x;
+		}
 		return cairo_draw_text(
 				cairo, font, text, foreground, background, scale, markup, NULL, NULL);
 	}
@@ -1197,18 +1200,14 @@ static void panel_draw(
 	}
 
 	if (*server->panel_date) {
-		int width;
-		if (!cairo_get_text_size(
-					cairo, font->font, server->panel_date, scale, false, &width, NULL)) {
-			x = (surface_width - width) / 2.0;
-			cairo_move_to(cairo, x, y);
-			cairo_draw_text(cairo, font->font, server->panel_date, foreground,
-					((server->active_monitor == panel->monitor &&
+		float *bg = ((server->active_monitor == panel->monitor &&
 							 server->control->base.element.scene_tree->node.enabled) ||
 							panel->regions.time.entered)
-							? accent
-							: NULL,
-					scale, false, NULL, NULL);
+				? accent
+				: NULL;
+		int width;
+		if (!cairo_draw_text_center(cairo, y, 0, surface_width, &x, font->font, server->panel_date,
+					foreground, bg, scale, false, &width, NULL)) {
 			panel->regions.time.box = (struct wlr_box){
 					.x = x,
 					.y = 0,
@@ -1335,7 +1334,7 @@ static void control_draw(
 
 	if (server->control_greeting) {
 		int height;
-		if (!cairo_draw_text_center(cairo, y, box.x, box.width, font->font,
+		if (!cairo_draw_text_center(cairo, y, box.x, box.width, NULL, font->font,
 					server->control_greeting, gray2, NULL, scale * 0.8, false, NULL, &height)) {
 			y += height + rect_radius;
 			cairo_move_to(cairo, box.x, y);
