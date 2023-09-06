@@ -86,7 +86,7 @@ struct ptychite_config {
 				float active[4];
 				float inactive[4];
 			} colors;
-		} bar;
+		} border;
 	} views;
 
 	struct {

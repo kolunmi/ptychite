@@ -698,7 +698,7 @@ static int config_set_views_border_thickness(struct ptychite_config *config,
 		return -1;
 	}
 
-	config->views.bar.thickness = thickness;
+	config->views.border.thickness = thickness;
 
 	if (config->compositor) {
 		ptychite_server_configure_views(config->compositor->server);
@@ -708,7 +708,7 @@ static int config_set_views_border_thickness(struct ptychite_config *config,
 }
 
 static struct json_object *config_get_views_border_thickness(struct ptychite_config *config) {
-	return json_object_new_int(config->views.bar.thickness);
+	return json_object_new_int(config->views.border.thickness);
 }
 
 static int config_set_views_border_colors_active(struct ptychite_config *config,
@@ -719,7 +719,7 @@ static int config_set_views_border_colors_active(struct ptychite_config *config,
 	}
 	const char *color = json_object_get_string(value);
 
-	if (arrcolor_parse_from_string(config->views.bar.colors.active, color)) {
+	if (arrcolor_parse_from_string(config->views.border.colors.active, color)) {
 		*error = "view border active color is malformed";
 		return -1;
 	}
@@ -728,7 +728,7 @@ static int config_set_views_border_colors_active(struct ptychite_config *config,
 }
 
 static struct json_object *config_get_views_border_colors_active(struct ptychite_config *config) {
-	return arrcolor_convert_to_json(config->views.bar.colors.active);
+	return arrcolor_convert_to_json(config->views.border.colors.active);
 }
 
 static int config_set_views_border_colors_inactive(struct ptychite_config *config,
@@ -739,7 +739,7 @@ static int config_set_views_border_colors_inactive(struct ptychite_config *confi
 	}
 	const char *color = json_object_get_string(value);
 
-	if (arrcolor_parse_from_string(config->views.bar.colors.inactive, color)) {
+	if (arrcolor_parse_from_string(config->views.border.colors.inactive, color)) {
 		*error = "view border inactive color is malformed";
 		return -1;
 	}
@@ -748,7 +748,7 @@ static int config_set_views_border_colors_inactive(struct ptychite_config *confi
 }
 
 static struct json_object *config_get_views_border_colors_inactive(struct ptychite_config *config) {
-	return arrcolor_convert_to_json(config->views.bar.colors.inactive);
+	return arrcolor_convert_to_json(config->views.border.colors.inactive);
 }
 
 static int config_set_monitors_default_scale(struct ptychite_config *config,
@@ -1281,15 +1281,15 @@ int ptychite_config_init(struct ptychite_config *config, struct ptychite_composi
 	config->panel.colors.chord[3] = 1.0;
 
 	config->views.map_to_front = true;
-	config->views.bar.thickness = 2;
-	config->views.bar.colors.active[0] = 0.2;
-	config->views.bar.colors.active[1] = 0.3;
-	config->views.bar.colors.active[2] = 0.8;
-	config->views.bar.colors.active[3] = 0.5;
-	config->views.bar.colors.inactive[0] = 0.5;
-	config->views.bar.colors.inactive[1] = 0.5;
-	config->views.bar.colors.inactive[2] = 0.5;
-	config->views.bar.colors.inactive[3] = 1.0;
+	config->views.border.thickness = 2;
+	config->views.border.colors.active[0] = 0.2;
+	config->views.border.colors.active[1] = 0.3;
+	config->views.border.colors.active[2] = 0.8;
+	config->views.border.colors.active[3] = 0.5;
+	config->views.border.colors.inactive[0] = 0.5;
+	config->views.border.colors.inactive[1] = 0.5;
+	config->views.border.colors.inactive[2] = 0.5;
+	config->views.border.colors.inactive[3] = 1.0;
 
 	config->monitors.default_scale = 1.0;
 	config->monitors.wallpaper.path = NULL;

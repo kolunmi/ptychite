@@ -1528,7 +1528,7 @@ static void keyboard_handle_modifiers(struct wl_listener *listener, void *data) 
 static void view_resize(struct view *view, int width, int height) {
 	int border_thickness;
 	if (view->server->compositor) {
-		border_thickness = view->server->compositor->config->views.bar.thickness;
+		border_thickness = view->server->compositor->config->views.border.thickness;
 	} else {
 		border_thickness = 3;
 	}
@@ -1768,7 +1768,7 @@ static void view_handle_map(struct wl_listener *listener, void *data) {
 	int width = geometry.width;
 	int height = geometry.height;
 	if (config) {
-		int thickness = config->views.bar.thickness;
+		int thickness = config->views.border.thickness;
 		width += 2 * thickness;
 		height += 2 * thickness;
 	} else {
@@ -2321,7 +2321,7 @@ static void server_handle_new_xdg_surface(struct wl_listener *listener, void *da
 	float default_colors[4] = {0.5, 0.5, 0.5, 1.0};
 	float *colors;
 	if (server->compositor) {
-		colors = server->compositor->config->views.bar.colors.inactive;
+		colors = server->compositor->config->views.border.colors.inactive;
 	} else {
 		colors = default_colors;
 	}
