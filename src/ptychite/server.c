@@ -1278,19 +1278,15 @@ static const struct window_impl panel_window_impl = {
 };
 
 static void panel_draw_auto(struct panel *panel) {
-	if (!panel->base.scene_buffer->node.enabled || !panel->monitor->server->compositor) {
-		panel->monitor->window_geometry.y = panel->monitor->geometry.y;
-		panel->monitor->window_geometry.height = panel->monitor->geometry.height;
+	if (!panel->base.element.scene_tree->node.enabled || !panel->monitor->server->compositor) {
 		return;
 	}
 
 	struct ptychite_font *font = &panel->monitor->server->compositor->config->panel.font;
 	int height = font->height + font->height / 2;
 
-	if (height != panel->base.element.height) {
-		panel->monitor->window_geometry.y = panel->monitor->geometry.y + height;
-		panel->monitor->window_geometry.height = panel->monitor->geometry.height - height;
-	}
+	panel->monitor->window_geometry.y = panel->monitor->geometry.y + height;
+	panel->monitor->window_geometry.height = panel->monitor->geometry.height - height;
 
 	window_relay_draw(&panel->base, panel->monitor->geometry.width, height);
 }
@@ -2108,12 +2104,16 @@ static void server_update_monitors(struct ptychite_server *server) {
 		}
 
 		wlr_output_layout_get_box(server->output_layout, monitor->output, &monitor->geometry);
-		monitor->window_geometry = (struct wlr_box){
-				.x = monitor->geometry.x,
-				.y = monitor->geometry.y + monitor->panel->base.element.height,
-				.width = monitor->geometry.width,
-				.height = monitor->geometry.height - monitor->panel->base.element.height,
-		};
+		if (monitor->panel && monitor->panel->base.element.scene_tree->node.enabled) {
+			monitor->window_geometry = (struct wlr_box){
+					.x = monitor->geometry.x,
+					.y = monitor->geometry.y + monitor->panel->base.element.height,
+					.width = monitor->geometry.width,
+					.height = monitor->geometry.height - monitor->panel->base.element.height,
+			};
+		} else {
+			monitor->window_geometry = monitor->geometry;
+		}
 
 		if (monitor->wallpaper) {
 			wlr_scene_node_set_position(&monitor->wallpaper->base.element.scene_tree->node,
@@ -2773,7 +2773,12 @@ void ptychite_server_configure_panels(struct ptychite_server *server) {
 
 		wlr_scene_node_set_enabled(&monitor->panel->base.element.scene_tree->node,
 				server->compositor->config->panel.enabled);
-		panel_draw_auto(monitor->panel);
+		if (monitor->panel->base.element.scene_tree->node.enabled) {
+			panel_draw_auto(monitor->panel);
+		} else {
+			monitor->window_geometry = monitor->geometry;
+		}
+		monitor_tile(monitor);
 	}
 
 	if (server->control->base.element.scene_tree->node.enabled) {
