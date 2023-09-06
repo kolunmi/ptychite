@@ -70,6 +70,10 @@ static void compositor_action_dec_mfact(struct ptychite_compositor *compositor, 
 	ptychite_server_tiling_decrease_master_factor(compositor->server);
 }
 
+static void compositor_action_toggle_rmaster(struct ptychite_compositor *compositor, void *data) {
+	ptychite_server_tiling_toggle_right_master(compositor->server);
+}
+
 static const struct {
 	char *name;
 	ptychite_action_func_t action_func;
@@ -84,6 +88,7 @@ static const struct {
 		{"dec_master", compositor_action_dec_master, PTYCHITE_ACTION_FUNC_DATA_NONE},
 		{"inc_mfact", compositor_action_inc_mfact, PTYCHITE_ACTION_FUNC_DATA_NONE},
 		{"dec_mfact", compositor_action_dec_mfact, PTYCHITE_ACTION_FUNC_DATA_NONE},
+		{"toggle_rmaster", compositor_action_toggle_rmaster, PTYCHITE_ACTION_FUNC_DATA_NONE},
 };
 
 int ptychite_compositor_init(struct ptychite_compositor *compositor) {

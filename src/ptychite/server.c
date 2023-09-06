@@ -151,6 +151,7 @@ struct monitor {
 		struct {
 			int views_in_master;
 			double master_factor;
+			bool right_master;
 		} traditional;
 	} tiling;
 
@@ -1587,6 +1588,7 @@ static void monitor_tile(struct monitor *monitor) {
 		int views_len = wl_list_length(&monitor->views);
 		int views_in_master = monitor->tiling.traditional.views_in_master;
 		double master_factor = monitor->tiling.traditional.master_factor;
+		bool right_master = monitor->tiling.traditional.right_master;
 
 		int master_width;
 		if (views_len > views_in_master) {
@@ -1596,6 +1598,9 @@ static void monitor_tile(struct monitor *monitor) {
 			master_width = monitor->window_geometry.width - gaps;
 		}
 
+		int master_x = monitor->window_geometry.x +
+				(right_master ? monitor->window_geometry.width - master_width : gaps);
+		int stack_x = monitor->window_geometry.x + (right_master ? gaps : master_width + gaps);
 		int master_y = gaps;
 		int stack_y = gaps;
 		int i = 0;
@@ -1604,15 +1609,14 @@ static void monitor_tile(struct monitor *monitor) {
 			if (i < views_in_master) {
 				int r = fmin(views_len, views_in_master) - i;
 				int height = (monitor->window_geometry.height - master_y - gaps * r) / r;
-				wlr_scene_node_set_position(&view->element.scene_tree->node,
-						monitor->window_geometry.x + gaps, monitor->window_geometry.y + master_y);
+				wlr_scene_node_set_position(&view->element.scene_tree->node, master_x,
+						monitor->window_geometry.y + master_y);
 				view_resize(view, master_width - gaps, height);
 				master_y += view->element.height + gaps;
 			} else {
 				int r = views_len - i;
 				int height = (monitor->window_geometry.height - stack_y - gaps * r) / r;
-				wlr_scene_node_set_position(&view->element.scene_tree->node,
-						monitor->window_geometry.x + master_width + gaps,
+				wlr_scene_node_set_position(&view->element.scene_tree->node, stack_x,
 						monitor->window_geometry.y + stack_y);
 				view_resize(view, monitor->window_geometry.width - master_width - 2 * gaps, height);
 				stack_y += view->element.height + gaps;
@@ -2837,4 +2841,15 @@ void ptychite_server_tiling_increase_master_factor(struct ptychite_server *serve
 
 void ptychite_server_tiling_decrease_master_factor(struct ptychite_server *server) {
 	server_tiling_change_master_factor(server, -0.05);
+}
+
+void ptychite_server_tiling_toggle_right_master(struct ptychite_server *server) {
+	if (!server->active_monitor) {
+		return;
+	}
+
+	server->active_monitor->tiling.traditional.right_master =
+			!server->active_monitor->tiling.traditional.right_master;
+
+	monitor_tile(server->active_monitor);
 }
