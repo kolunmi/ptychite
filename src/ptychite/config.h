@@ -79,6 +79,7 @@ struct ptychite_config {
 	} panel;
 
 	struct {
+		bool map_to_front;
 		struct {
 			int thickness;
 			struct {

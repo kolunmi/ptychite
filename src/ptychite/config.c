@@ -665,6 +665,23 @@ static struct json_object *config_get_panel_colors_chord(struct ptychite_config 
 	return arrcolor_convert_to_json(config->panel.colors.chord);
 }
 
+static int config_set_views_map_to_front(struct ptychite_config *config, struct json_object *value,
+		enum ptychite_property_set_mode mode, char **error) {
+	if (!json_object_is_type(value, json_type_boolean)) {
+		*error = "property map_to_front must be a boolean";
+		return -1;
+	}
+	bool map_to_front = json_object_get_boolean(value);
+
+	config->views.map_to_front = map_to_front;
+
+	return 0;
+}
+
+static struct json_object *config_get_views_map_to_front(struct ptychite_config *config) {
+	return json_object_new_boolean(config->views.map_to_front);
+}
+
 static int config_set_views_border_thickness(struct ptychite_config *config,
 		struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
 	if (!json_object_is_type(value, json_type_int)) {
@@ -958,6 +975,8 @@ struct property_entry config_property_table[] = {
 		{(char *[]){"panel", "colors", "chord", NULL}, config_set_panel_colors_chord,
 				config_get_panel_colors_chord},
 
+		{(char *[]){"views", "map_to_front", NULL}, config_set_views_map_to_front,
+				config_get_views_map_to_front},
 		{(char *[]){"views", "border", "thickness", NULL}, config_set_views_border_thickness,
 				config_get_views_border_thickness},
 		{(char *[]){"views", "border", "colors", "active", NULL},
@@ -1261,6 +1280,7 @@ int ptychite_config_init(struct ptychite_config *config, struct ptychite_composi
 	config->panel.colors.chord[2] = 0.2;
 	config->panel.colors.chord[3] = 1.0;
 
+	config->views.map_to_front = true;
 	config->views.bar.thickness = 2;
 	config->views.bar.colors.active[0] = 0.2;
 	config->views.bar.colors.active[1] = 0.3;

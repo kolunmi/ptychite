@@ -1745,17 +1745,22 @@ static void view_begin_interactive(struct view *view, enum cursor_mode mode) {
 static void view_handle_map(struct wl_listener *listener, void *data) {
 	struct view *view = wl_container_of(listener, view, map);
 
-	wl_list_insert(&view->server->views, &view->link);
-	if (view->server->active_monitor) {
-		view->monitor = view->server->active_monitor;
-		wl_list_insert(&view->monitor->views, &view->monitor_link);
-	}
-
 	struct ptychite_config *config;
 	if (view->server->compositor) {
 		config = view->server->compositor->config;
 	} else {
 		config = NULL;
+	}
+
+	wl_list_insert(&view->server->views, &view->link);
+
+	if (view->server->active_monitor) {
+		view->monitor = view->server->active_monitor;
+		if (config && !config->views.map_to_front) {
+			wl_list_insert(view->monitor->views.prev, &view->monitor_link);
+		} else {
+			wl_list_insert(&view->monitor->views, &view->monitor_link);
+		}
 	}
 
 	struct wlr_box geometry;
