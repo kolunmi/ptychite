@@ -304,10 +304,6 @@ static void message_set_property(struct wl_client *client, struct wl_resource *r
 	}
 
 	struct ptychite_server *server = wl_resource_get_user_data(resource);
-	if (!server->compositor) {
-		CALLBACK_FAILURE_SEND_AND_DESTROY(callback, "server has no configuration");
-		return;
-	}
 
 	enum ptychite_property_set_mode set_mode;
 	switch (mode) {
@@ -348,10 +344,6 @@ static void message_get_property(struct wl_client *client, struct wl_resource *r
 	}
 
 	struct ptychite_server *server = wl_resource_get_user_data(resource);
-	if (!server->compositor) {
-		CALLBACK_FAILURE_SEND_AND_DESTROY(callback, "server has no configuration");
-		return;
-	}
 
 	char *error;
 	char *string = ptychite_config_get_property(server->compositor->config, path, get_mode, &error);
@@ -851,7 +843,7 @@ static void wallpaper_draw(
 
 	struct ptychite_compositor *compositor = wallpaper->monitor->server->compositor;
 
-	if (!compositor || !compositor->config->monitors.wallpaper.surface) {
+	if (!compositor->config->monitors.wallpaper.surface) {
 		cairo_set_source_rgba(cairo, 0.2, 0.2, 0.3, 1.0);
 		cairo_rectangle(cairo, 0, 0, surface_width, surface_height);
 		cairo_fill(cairo);
@@ -1146,9 +1138,6 @@ static const uint32_t ptychite_svg[] = {
 static void panel_draw(
 		struct window *window, cairo_t *cairo, int surface_width, int surface_height, float scale) {
 	struct panel *panel = wl_container_of(window, panel, base);
-	if (!panel->monitor->server->compositor) {
-		return;
-	}
 
 	struct ptychite_server *server = panel->monitor->server;
 	struct ptychite_config *config = server->compositor->config;
@@ -1302,10 +1291,6 @@ static const struct window_impl panel_window_impl = {
 };
 
 static void panel_draw_auto(struct panel *panel) {
-	if (!panel->base.element.scene_tree->node.enabled || !panel->monitor->server->compositor) {
-		return;
-	}
-
 	struct ptychite_font *font = &panel->monitor->server->compositor->config->panel.font;
 	int height = font->height + font->height / 2;
 
@@ -1401,7 +1386,7 @@ static const struct window_impl control_window_impl = {
 static void control_draw_auto(struct control *control) {
 	struct monitor *monitor = control->base.server->active_monitor;
 
-	if (!monitor || !monitor->server->compositor) {
+	if (!monitor) {
 		return;
 	}
 
@@ -1424,7 +1409,7 @@ static void control_show(struct control *control) {
 	control_draw_auto(control);
 	wlr_scene_node_set_enabled(&control->base.element.scene_tree->node, true);
 	struct monitor *monitor = control->base.server->active_monitor;
-	if (monitor && monitor->panel) {
+	if (monitor && monitor->panel && monitor->panel->base.element.scene_tree->node.enabled) {
 		panel_draw_auto(control->base.server->active_monitor->panel);
 	}
 }
@@ -1432,7 +1417,7 @@ static void control_show(struct control *control) {
 static void control_hide(struct control *control) {
 	wlr_scene_node_set_enabled(&control->base.element.scene_tree->node, false);
 	struct monitor *monitor = control->base.server->active_monitor;
-	if (monitor && monitor->panel) {
+	if (monitor && monitor->panel && monitor->panel->base.element.scene_tree->node.enabled) {
 		panel_draw_auto(control->base.server->active_monitor->panel);
 	}
 }
@@ -1564,7 +1549,7 @@ static void keyboard_handle_key(struct wl_listener *listener, void *data) {
 	bool handled = false;
 	uint32_t modifiers = wlr_keyboard_get_modifiers(keyboard->keyboard);
 
-	if (server->compositor && event->state == WL_KEYBOARD_KEY_STATE_PRESSED) {
+	if (event->state == WL_KEYBOARD_KEY_STATE_PRESSED) {
 		size_t old_keys_size = server->keys.size;
 
 		int i;
@@ -1663,13 +1648,7 @@ static void view_resize(struct view *view, int width, int height) {
 	view->element.width = width;
 	view->element.height = height;
 
-	int border_thickness;
-	if (view->server->compositor) {
-		border_thickness = view->server->compositor->config->views.border.thickness;
-	} else {
-		border_thickness = 3;
-	}
-
+	int border_thickness = view->server->compositor->config->views.border.thickness;
 	int top_thickness;
 	if (view->title_bar && view->title_bar->base.element.scene_tree->node.enabled) {
 		struct ptychite_font *font = &view->server->compositor->config->panel.font;
@@ -1733,7 +1712,7 @@ static void view_resize(struct view *view, int width, int height) {
 }
 
 static void monitor_tile(struct monitor *monitor) {
-	if (!monitor->server->compositor || wl_list_empty(&monitor->views)) {
+	if (wl_list_empty(&monitor->views)) {
 		return;
 	}
 
@@ -1906,18 +1885,13 @@ static void view_begin_interactive(struct view *view, enum cursor_mode mode) {
 static void view_handle_map(struct wl_listener *listener, void *data) {
 	struct view *view = wl_container_of(listener, view, map);
 
-	struct ptychite_config *config;
-	if (view->server->compositor) {
-		config = view->server->compositor->config;
-	} else {
-		config = NULL;
-	}
+	struct ptychite_config *config = view->server->compositor->config;
 
 	wl_list_insert(&view->server->views, &view->link);
 
 	if (view->server->active_monitor) {
 		view->monitor = view->server->active_monitor;
-		if (config && !config->views.map_to_front) {
+		if (!config->views.map_to_front) {
 			wl_list_insert(view->monitor->views.prev, &view->monitor_link);
 		} else {
 			wl_list_insert(&view->monitor->views, &view->monitor_link);
@@ -1926,20 +1900,10 @@ static void view_handle_map(struct wl_listener *listener, void *data) {
 
 	struct wlr_box geometry;
 	wlr_xdg_surface_get_geometry(view->xdg_toplevel->base, &geometry);
-	int width = geometry.width;
-	int height = geometry.height;
-	if (config) {
-		int thickness = config->views.border.thickness;
-		width += 2 * thickness;
-		height += 2 * thickness;
-	} else {
-		width += 2 * 3;
-		height += 2 * 3;
-	}
-	view->initial_width = width;
-	view->initial_height = height;
+	view->initial_width = geometry.width + 2 * config->views.border.thickness;
+	view->initial_height = geometry.height + 2 * config->views.border.thickness;
 
-	if (!view->monitor || !config || config->tiling.mode == PTYCHITE_TILING_NONE) {
+	if (!view->monitor || config->tiling.mode == PTYCHITE_TILING_NONE) {
 		struct wlr_box box;
 		if (view->monitor) {
 			box = view->monitor->window_geometry;
@@ -1948,8 +1912,9 @@ static void view_handle_map(struct wl_listener *listener, void *data) {
 		}
 
 		wlr_scene_node_set_position(&view->element.scene_tree->node,
-				box.x + (box.width - width) / 2, box.y + (box.height - height) / 2);
-		view_resize(view, width, height);
+				box.x + (box.width - view->initial_width) / 2,
+				box.y + (box.height - view->initial_height) / 2);
+		view_resize(view, view->initial_width, view->initial_height);
 	} else {
 		monitor_tile(view->monitor);
 	}
@@ -2029,14 +1994,7 @@ static struct window *element_get_window(struct element *element) {
 }
 
 static void server_activate_monitor(struct ptychite_server *server, struct monitor *monitor) {
-	struct monitor *old_monitor = server->active_monitor;
 	server->active_monitor = monitor;
-
-	if (old_monitor) {
-		panel_draw_auto(old_monitor->panel);
-	}
-
-	panel_draw_auto(monitor->panel);
 }
 
 static struct element *server_identify_element_at(struct ptychite_server *server, double lx,
@@ -2167,28 +2125,20 @@ static void server_new_keyboard(struct ptychite_server *server, struct wlr_input
 	p_keyboard->server = server;
 	p_keyboard->keyboard = keyboard;
 
-	if (server->compositor) {
-		wlr_keyboard_set_repeat_info(keyboard, server->compositor->config->keyboard.repeat.rate,
-				server->compositor->config->keyboard.repeat.delay);
-	} else {
-		wlr_keyboard_set_repeat_info(keyboard, 25, 600);
-	}
+	wlr_keyboard_set_repeat_info(keyboard, server->compositor->config->keyboard.repeat.rate,
+			server->compositor->config->keyboard.repeat.delay);
 
 	struct xkb_context *context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
 	if (context) {
-		struct xkb_rule_names rules, *rules_ptr = NULL;
-		if (server->compositor) {
-			rules = (struct xkb_rule_names){
-					.options = server->compositor->config->keyboard.xkb.options,
-					.rules = NULL,
-					.layout = NULL,
-					.model = NULL,
-					.variant = NULL,
-			};
-			rules_ptr = &rules;
-		}
+		struct xkb_rule_names rules = (struct xkb_rule_names){
+				.options = server->compositor->config->keyboard.xkb.options,
+				.rules = NULL,
+				.layout = NULL,
+				.model = NULL,
+				.variant = NULL,
+		};
 		struct xkb_keymap *keymap =
-				xkb_keymap_new_from_names(context, rules_ptr, XKB_KEYMAP_COMPILE_NO_FLAGS);
+				xkb_keymap_new_from_names(context, &rules, XKB_KEYMAP_COMPILE_NO_FLAGS);
 		wlr_keyboard_set_keymap(keyboard, keymap);
 		xkb_keymap_unref(keymap);
 		xkb_context_unref(context);
@@ -2416,9 +2366,7 @@ static void server_handle_new_output(struct wl_listener *listener, void *data) {
 	if (mode) {
 		wlr_output_state_set_mode(&state, mode);
 	}
-	if (server->compositor) {
-		wlr_output_state_set_scale(&state, server->compositor->config->monitors.default_scale);
-	}
+	wlr_output_state_set_scale(&state, server->compositor->config->monitors.default_scale);
 
 	wlr_output_commit_state(output, &state);
 	wlr_output_state_finish(&state);
@@ -2495,13 +2443,7 @@ static void server_handle_new_xdg_surface(struct wl_listener *listener, void *da
 			wlr_scene_xdg_surface_create(view->element.scene_tree, view->xdg_toplevel->base);
 	view->element.scene_tree->node.data = view->scene_tree_surface->node.data = &view->element;
 
-	float default_colors[4] = {0.5, 0.5, 0.5, 1.0};
-	float *colors;
-	if (server->compositor) {
-		colors = server->compositor->config->views.border.colors.inactive;
-	} else {
-		colors = default_colors;
-	}
+	float *colors = server->compositor->config->views.border.colors.inactive;
 	struct wlr_scene_rect **borders[] = {
 			&view->border.top, &view->border.right, &view->border.bottom, &view->border.left};
 	size_t i;
@@ -2919,10 +2861,6 @@ int ptychite_server_close_focused_client(struct ptychite_server *server) {
 }
 
 void ptychite_server_configure_keyboards(struct ptychite_server *server) {
-	if (!server->compositor) {
-		return;
-	}
-
 	struct ptychite_config *config = server->compositor->config;
 
 	struct keyboard *keyboard;
@@ -2954,10 +2892,6 @@ void ptychite_server_configure_keyboards(struct ptychite_server *server) {
 }
 
 void ptychite_server_configure_panels(struct ptychite_server *server) {
-	if (!server->compositor) {
-		return;
-	}
-
 	struct monitor *monitor;
 	wl_list_for_each(monitor, &server->monitors, link) {
 		if (!monitor->panel) {
@@ -2980,10 +2914,6 @@ void ptychite_server_configure_panels(struct ptychite_server *server) {
 }
 
 void ptychite_server_configure_views(struct ptychite_server *server) {
-	if (!server->compositor) {
-		return;
-	}
-
 	struct view *view;
 	wl_list_for_each(view, &server->views, link) {
 		if (view->title_bar) {
