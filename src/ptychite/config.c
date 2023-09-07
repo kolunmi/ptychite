@@ -682,6 +682,27 @@ static struct json_object *config_get_views_map_to_front(struct ptychite_config 
 	return json_object_new_boolean(config->views.map_to_front);
 }
 
+static int config_set_views_title_bar_enabled(struct ptychite_config *config,
+		struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
+	if (!json_object_is_type(value, json_type_boolean)) {
+		*error = "title bar switch must be a boolean";
+		return -1;
+	}
+	bool enabled = json_object_get_boolean(value);
+
+	config->views.title_bar.enabled = enabled;
+
+	if (config->compositor) {
+		ptychite_server_configure_views(config->compositor->server);
+	}
+
+	return 0;
+}
+
+static struct json_object *config_get_views_title_bar_enabled(struct ptychite_config *config) {
+	return json_object_new_boolean(config->views.title_bar.enabled);
+}
+
 static int config_set_views_border_thickness(struct ptychite_config *config,
 		struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
 	if (!json_object_is_type(value, json_type_int)) {
@@ -977,6 +998,8 @@ struct property_entry config_property_table[] = {
 
 		{(char *[]){"views", "map_to_front", NULL}, config_set_views_map_to_front,
 				config_get_views_map_to_front},
+		{(char *[]){"views", "title_bar", "enabled", NULL}, config_set_views_title_bar_enabled,
+				config_get_views_title_bar_enabled},
 		{(char *[]){"views", "border", "thickness", NULL}, config_set_views_border_thickness,
 				config_get_views_border_thickness},
 		{(char *[]){"views", "border", "colors", "active", NULL},
@@ -1281,6 +1304,7 @@ int ptychite_config_init(struct ptychite_config *config, struct ptychite_composi
 	config->panel.colors.chord[3] = 1.0;
 
 	config->views.map_to_front = true;
+	config->views.title_bar.enabled = true;
 	config->views.border.thickness = 2;
 	config->views.border.colors.active[0] = 0.2;
 	config->views.border.colors.active[1] = 0.3;

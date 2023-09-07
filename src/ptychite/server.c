@@ -185,6 +185,7 @@ struct view {
 	struct monitor *monitor;
 	struct wlr_xdg_toplevel *xdg_toplevel;
 	struct wlr_scene_tree *scene_tree_surface;
+	struct title_bar *title_bar;
 	struct {
 		struct wlr_scene_rect *top;
 		struct wlr_scene_rect *right;
@@ -255,6 +256,16 @@ struct control {
 	struct {
 		struct wlr_box box;
 	} time;
+};
+
+struct title_bar {
+	struct window base;
+	struct view *view;
+
+	struct {
+		struct mouse_region hide;
+		struct mouse_region close;
+	} regions;
 };
 
 static int protocol_json_get_mode_convert_to_native(
@@ -714,7 +725,12 @@ static int window_relay_draw(struct window *window, int width, int height) {
 		return -1;
 	}
 
-	float scale = window->output->scale;
+	float scale;
+	if (window->output) {
+		scale = window->output->scale;
+	} else {
+		scale = 1.0;
+	}
 	int scaled_width = ceil(width * scale);
 	int scaled_height = ceil(height * scale);
 
@@ -1414,6 +1430,98 @@ static void control_hide(struct control *control) {
 	}
 }
 
+static void title_bar_draw(
+		struct window *window, cairo_t *cairo, int surface_width, int surface_height, float scale) {
+	struct title_bar *title_bar = wl_container_of(window, title_bar, base);
+
+	struct ptychite_server *server = title_bar->view->server;
+	struct ptychite_config *config = server->compositor->config;
+
+	float *background = config->views.border.colors.inactive;
+	float *foreground = config->panel.colors.foreground;
+
+	cairo_set_source_rgba(cairo, background[0], background[1], background[2], background[3]);
+	cairo_rectangle(cairo, 0, 0, surface_width, surface_height);
+	cairo_fill(cairo);
+
+	cairo_set_source_rgba(cairo, foreground[0], foreground[1], foreground[2], foreground[3]);
+	struct ptychite_font *font = &config->panel.font;
+	int font_height = font->height * scale;
+
+	int x = font_height / 2;
+	int y = (surface_height - font_height) / 2;
+
+	cairo_move_to(cairo, x, y);
+	cairo_draw_text(cairo, font->font, title_bar->view->xdg_toplevel->title, foreground, NULL,
+			scale, false, NULL, NULL);
+}
+
+static void title_bar_handle_pointer_enter(struct window *window) {
+}
+
+static void title_bar_handle_pointer_leave(struct window *window) {
+	struct title_bar *title_bar = wl_container_of(window, title_bar, base);
+
+	bool redraw = false;
+	redraw |= title_bar->regions.hide.entered;
+	title_bar->regions.hide.entered = false;
+	redraw |= title_bar->regions.close.entered;
+	title_bar->regions.close.entered = false;
+
+	if (redraw) {
+		window_relay_draw_same_size(window);
+	}
+}
+
+static void title_bar_handle_pointer_move(struct window *window, double x, double y) {
+	struct title_bar *title_bar = wl_container_of(window, title_bar, base);
+
+	bool redraw = false;
+	redraw |= mouse_region_update_state(&title_bar->regions.hide, x, y);
+	redraw |= mouse_region_update_state(&title_bar->regions.close, x, y);
+
+	if (redraw) {
+		window_relay_draw_same_size(window);
+	}
+}
+
+static void title_bar_handle_pointer_button(
+		struct window *window, double x, double y, struct wlr_pointer_button_event *event) {
+	struct title_bar *title_bar = wl_container_of(window, title_bar, base);
+
+	if (event->state != WLR_BUTTON_PRESSED) {
+		return;
+	}
+}
+
+static void title_bar_destroy(struct window *window) {
+	struct title_bar *title_bar = wl_container_of(window, title_bar, base);
+
+	free(title_bar);
+}
+
+static const struct window_impl title_bar_window_impl = {
+		.draw = title_bar_draw,
+		.handle_pointer_enter = title_bar_handle_pointer_enter,
+		.handle_pointer_leave = title_bar_handle_pointer_leave,
+		.handle_pointer_move = title_bar_handle_pointer_move,
+		.handle_pointer_button = title_bar_handle_pointer_button,
+		.destroy = title_bar_destroy,
+};
+
+static void title_bar_draw_auto(struct title_bar *title_bar) {
+	if (title_bar->view->monitor) {
+		title_bar->base.output = title_bar->view->monitor->output;
+	} else {
+		title_bar->base.output = NULL;
+	}
+
+	struct ptychite_font *font = &title_bar->view->monitor->server->compositor->config->panel.font;
+
+	window_relay_draw(
+			&title_bar->base, title_bar->view->element.width, font->height + font->height / 8);
+}
+
 static void keyboard_handle_key(struct wl_listener *listener, void *data) {
 	struct keyboard *keyboard = wl_container_of(listener, keyboard, key);
 	struct wlr_keyboard_key_event *event = data;
@@ -1523,6 +1631,9 @@ static void keyboard_handle_modifiers(struct wl_listener *listener, void *data) 
 }
 
 static void view_resize(struct view *view, int width, int height) {
+	view->element.width = width;
+	view->element.height = height;
+
 	int border_thickness;
 	if (view->server->compositor) {
 		border_thickness = view->server->compositor->config->views.border.thickness;
@@ -1530,8 +1641,13 @@ static void view_resize(struct view *view, int width, int height) {
 		border_thickness = 3;
 	}
 
-	view->element.width = width;
-	view->element.height = height;
+	int top_thickness;
+	if (view->title_bar && view->title_bar->base.element.scene_tree->node.enabled) {
+		title_bar_draw_auto(view->title_bar);
+		top_thickness = view->title_bar->base.element.height;
+	} else {
+		top_thickness = border_thickness;
+	}
 
 	if (view->xdg_toplevel->base->client->shell->version >=
 					XDG_TOPLEVEL_CONFIGURE_BOUNDS_SINCE_VERSION &&
@@ -1551,26 +1667,28 @@ static void view_resize(struct view *view, int width, int height) {
 	if (max_width > 0 && !(2 * border_thickness > INT_MAX - max_width)) {
 		view->element.width = fmin(max_width + (2 * border_thickness), view->element.width);
 	}
-	if (max_height > 0 && !(2 * border_thickness > INT_MAX - max_height)) {
-		view->element.height = fmin(max_height + (2 * border_thickness), view->element.height);
+	if (max_height > 0 && !(top_thickness + border_thickness > INT_MAX - max_height)) {
+		view->element.height =
+				fmin(max_height + (top_thickness + border_thickness), view->element.height);
 	}
 
-	wlr_scene_node_set_position(
-			&view->scene_tree_surface->node, border_thickness, border_thickness);
+	wlr_scene_node_set_position(&view->scene_tree_surface->node, border_thickness, top_thickness);
 	wlr_xdg_toplevel_set_size(view->xdg_toplevel, view->element.width - 2 * border_thickness,
-			view->element.height - 2 * border_thickness);
+			view->element.height - (top_thickness + border_thickness));
 
-	wlr_scene_rect_set_size(view->border.top, view->element.width, border_thickness);
+	if (view->border.top->node.enabled) {
+		wlr_scene_rect_set_size(view->border.top, view->element.width, border_thickness);
+	}
 	wlr_scene_node_set_position(
-			&view->border.right->node, view->element.width - border_thickness, border_thickness);
-	wlr_scene_rect_set_size(
-			view->border.right, border_thickness, view->element.height - 2 * border_thickness);
+			&view->border.right->node, view->element.width - border_thickness, top_thickness);
+	wlr_scene_rect_set_size(view->border.right, border_thickness,
+			view->element.height - (top_thickness + border_thickness));
 	wlr_scene_node_set_position(
 			&view->border.bottom->node, 0, view->element.height - border_thickness);
 	wlr_scene_rect_set_size(view->border.bottom, view->element.width, border_thickness);
-	wlr_scene_node_set_position(&view->border.left->node, 0, border_thickness);
-	wlr_scene_rect_set_size(
-			view->border.left, border_thickness, view->element.height - 2 * border_thickness);
+	wlr_scene_node_set_position(&view->border.left->node, 0, top_thickness);
+	wlr_scene_rect_set_size(view->border.left, border_thickness,
+			view->element.height - (top_thickness + border_thickness));
 }
 
 static void monitor_tile(struct monitor *monitor) {
@@ -2337,6 +2455,20 @@ static void server_handle_new_xdg_surface(struct wl_listener *listener, void *da
 		(*borders[i])->node.data = view;
 	}
 
+	if ((view->title_bar = calloc(1, sizeof(struct title_bar)))) {
+		if (!window_init(&view->title_bar->base, &title_bar_window_impl, view->element.scene_tree,
+					NULL)) {
+			view->title_bar->view = view;
+			wlr_scene_node_set_enabled(&view->title_bar->base.element.scene_tree->node,
+					server->compositor->config->views.title_bar.enabled);
+			wlr_scene_node_set_enabled(
+					&view->border.top->node, !server->compositor->config->views.title_bar.enabled);
+		} else {
+			free(view->title_bar);
+			view->title_bar = NULL;
+		}
+	}
+
 	view->map.notify = view_handle_map;
 	wl_signal_add(&xdg_surface->surface->events.map, &view->map);
 	view->unmap.notify = view_handle_unmap;
@@ -2797,6 +2929,12 @@ void ptychite_server_configure_views(struct ptychite_server *server) {
 
 	struct view *view;
 	wl_list_for_each(view, &server->views, link) {
+		if (view->title_bar) {
+			wlr_scene_node_set_enabled(&view->title_bar->base.element.scene_tree->node,
+					server->compositor->config->views.title_bar.enabled);
+			wlr_scene_node_set_enabled(
+					&view->border.top->node, !server->compositor->config->views.title_bar.enabled);
+		}
 		view_resize(view, view->element.width, view->element.height);
 	}
 }
