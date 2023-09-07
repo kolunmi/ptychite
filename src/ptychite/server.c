@@ -840,17 +840,15 @@ static void window_relay_pointer_button(
 static void wallpaper_draw(
 		struct window *window, cairo_t *cairo, int surface_width, int surface_height, float scale) {
 	struct panel *wallpaper = wl_container_of(window, wallpaper, base);
+	struct ptychite_config *config = wallpaper->monitor->server->compositor->config;
 
-	struct ptychite_compositor *compositor = wallpaper->monitor->server->compositor;
-
-	if (!compositor->config->monitors.wallpaper.surface) {
+	if (!config->monitors.wallpaper.surface) {
 		cairo_set_source_rgba(cairo, 0.2, 0.2, 0.3, 1.0);
 		cairo_rectangle(cairo, 0, 0, surface_width, surface_height);
 		cairo_fill(cairo);
 		return;
 	}
 
-	struct ptychite_config *config = compositor->config;
 	cairo_surface_t *image_surface = config->monitors.wallpaper.surface;
 	double image_width = cairo_image_surface_get_width(image_surface);
 	double image_height = cairo_image_surface_get_height(image_surface);
@@ -2516,8 +2514,11 @@ static void server_handle_cursor_button(struct wl_listener *listener, void *data
 	struct wlr_pointer_button_event *event = data;
 
 	if (event->state == WLR_BUTTON_RELEASED) {
-		server->cursor_mode = CURSOR_PASSTHROUGH;
-		server->grabbed_view = NULL;
+		if (server->cursor_mode != CURSOR_PASSTHROUGH) {
+			server->cursor_mode = CURSOR_PASSTHROUGH;
+			server->grabbed_view = NULL;
+			wlr_cursor_set_xcursor(server->cursor, server->cursor_mgr, "default");
+		}
 	}
 
 	double sx, sy;
