@@ -1880,13 +1880,19 @@ static void view_begin_interactive(struct view *view, enum cursor_mode mode) {
 	}
 }
 
+static void view_handle_set_title(struct wl_listener *listener, void *data) {
+	struct view *view = wl_container_of(listener, view, set_title);
+
+	if (view->title_bar && view->title_bar->base.element.scene_tree->node.enabled) {
+		window_relay_draw_same_size(&view->title_bar->base);
+	}
+}
+
 static void view_handle_map(struct wl_listener *listener, void *data) {
 	struct view *view = wl_container_of(listener, view, map);
-
 	struct ptychite_config *config = view->server->compositor->config;
 
 	wl_list_insert(&view->server->views, &view->link);
-
 	if (view->server->active_monitor) {
 		view->monitor = view->server->active_monitor;
 		if (!config->views.map_to_front) {
@@ -1895,6 +1901,8 @@ static void view_handle_map(struct wl_listener *listener, void *data) {
 			wl_list_insert(&view->monitor->views, &view->monitor_link);
 		}
 	}
+	view->set_title.notify = view_handle_set_title;
+	wl_signal_add(&view->xdg_toplevel->events.set_title, &view->set_title);
 
 	struct wlr_box geometry;
 	wlr_xdg_surface_get_geometry(view->xdg_toplevel->base, &geometry);
@@ -1932,6 +1940,7 @@ static void view_handle_unmap(struct wl_listener *listener, void *data) {
 	// wl_list_remove(&view->commit.link);
 	wl_list_remove(&view->monitor_link);
 	wl_list_remove(&view->link);
+	wl_list_remove(&view->set_title.link);
 
 	wlr_scene_node_set_enabled(&view->element.scene_tree->node, false);
 
@@ -1948,7 +1957,6 @@ static void view_handle_destroy(struct wl_listener *listener, void *data) {
 	wl_list_remove(&view->destroy.link);
 	wl_list_remove(&view->request_maximize.link);
 	wl_list_remove(&view->request_fullscreen.link);
-	wl_list_remove(&view->set_title.link);
 
 	wlr_scene_node_destroy(&view->element.scene_tree->node);
 
@@ -1965,14 +1973,6 @@ static void view_handle_request_fullscreen(struct wl_listener *listener, void *d
 	struct view *view = wl_container_of(listener, view, request_fullscreen);
 
 	wlr_xdg_surface_schedule_configure(view->xdg_toplevel->base);
-}
-
-static void view_handle_set_title(struct wl_listener *listener, void *data) {
-	struct view *view = wl_container_of(listener, view, set_title);
-
-	if (view->title_bar && view->title_bar->base.element.scene_tree->node.enabled) {
-		window_relay_draw_same_size(&view->title_bar->base);
-	}
 }
 
 static struct view *element_get_view(struct element *element) {
@@ -2476,8 +2476,6 @@ static void server_handle_new_xdg_surface(struct wl_listener *listener, void *da
 	wl_signal_add(&toplevel->events.request_maximize, &view->request_maximize);
 	view->request_fullscreen.notify = view_handle_request_fullscreen;
 	wl_signal_add(&toplevel->events.request_fullscreen, &view->request_fullscreen);
-	view->set_title.notify = view_handle_set_title;
-	wl_signal_add(&toplevel->events.set_title, &view->set_title);
 }
 
 static void server_handle_idle_inhibitor_create(struct wl_listener *listener, void *data) {
