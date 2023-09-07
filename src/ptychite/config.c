@@ -703,6 +703,30 @@ static struct json_object *config_get_views_title_bar_enabled(struct ptychite_co
 	return json_object_new_boolean(config->views.title_bar.enabled);
 }
 
+static int config_set_views_title_bar_colors_close(struct ptychite_config *config,
+		struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
+	if (!json_object_is_type(value, json_type_string)) {
+		*error = "title bar color must be a string";
+		return -1;
+	}
+	const char *color = json_object_get_string(value);
+
+	if (arrcolor_parse_from_string(config->views.title_bar.colors.close, color)) {
+		*error = "title bar color is malformed";
+		return -1;
+	}
+
+	if (config->compositor) {
+		ptychite_server_configure_views(config->compositor->server);
+	}
+
+	return 0;
+}
+
+static struct json_object *config_get_views_title_bar_colors_close(struct ptychite_config *config) {
+	return arrcolor_convert_to_json(config->views.title_bar.colors.close);
+}
+
 static int config_set_views_border_thickness(struct ptychite_config *config,
 		struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
 	if (!json_object_is_type(value, json_type_int)) {
@@ -735,13 +759,13 @@ static struct json_object *config_get_views_border_thickness(struct ptychite_con
 static int config_set_views_border_colors_active(struct ptychite_config *config,
 		struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
 	if (!json_object_is_type(value, json_type_string)) {
-		*error = "view border active color must be a string";
+		*error = "view border color must be a string";
 		return -1;
 	}
 	const char *color = json_object_get_string(value);
 
 	if (arrcolor_parse_from_string(config->views.border.colors.active, color)) {
-		*error = "view border active color is malformed";
+		*error = "view border color is malformed";
 		return -1;
 	}
 
@@ -755,13 +779,13 @@ static struct json_object *config_get_views_border_colors_active(struct ptychite
 static int config_set_views_border_colors_inactive(struct ptychite_config *config,
 		struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
 	if (!json_object_is_type(value, json_type_string)) {
-		*error = "view border inactive color must be a string";
+		*error = "view border color must be a string";
 		return -1;
 	}
 	const char *color = json_object_get_string(value);
 
 	if (arrcolor_parse_from_string(config->views.border.colors.inactive, color)) {
-		*error = "view border inactive color is malformed";
+		*error = "view border color is malformed";
 		return -1;
 	}
 
@@ -1000,6 +1024,8 @@ struct property_entry config_property_table[] = {
 				config_get_views_map_to_front},
 		{(char *[]){"views", "title_bar", "enabled", NULL}, config_set_views_title_bar_enabled,
 				config_get_views_title_bar_enabled},
+		{(char *[]){"views", "title_bar", "colors", "close", NULL},
+				config_set_views_title_bar_colors_close, config_get_views_title_bar_colors_close},
 		{(char *[]){"views", "border", "thickness", NULL}, config_set_views_border_thickness,
 				config_get_views_border_thickness},
 		{(char *[]){"views", "border", "colors", "active", NULL},
@@ -1305,6 +1331,10 @@ int ptychite_config_init(struct ptychite_config *config, struct ptychite_composi
 
 	config->views.map_to_front = true;
 	config->views.title_bar.enabled = true;
+	config->views.title_bar.colors.close[0] = 0.8;
+	config->views.title_bar.colors.close[1] = 0.0;
+	config->views.title_bar.colors.close[2] = 0.2;
+	config->views.title_bar.colors.close[3] = 1.0;
 	config->views.border.thickness = 2;
 	config->views.border.colors.active[0] = 0.2;
 	config->views.border.colors.active[1] = 0.3;

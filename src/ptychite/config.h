@@ -82,6 +82,9 @@ struct ptychite_config {
 		bool map_to_front;
 		struct {
 			bool enabled;
+			struct {
+				float close[4];
+			} colors;
 		} title_bar;
 		struct {
 			int thickness;

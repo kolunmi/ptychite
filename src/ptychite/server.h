@@ -35,4 +35,6 @@ void ptychite_server_tiling_decrease_master_factor(struct ptychite_server *serve
 
 void ptychite_server_tiling_toggle_right_master(struct ptychite_server *server);
 
+void ptychite_server_check_cursor(struct ptychite_server *server);
+
 #endif
