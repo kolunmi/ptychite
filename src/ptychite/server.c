@@ -195,6 +195,7 @@ struct view {
 
 	int initial_width;
 	int initial_height;
+	bool focused;
 
 	struct wl_listener map;
 	struct wl_listener unmap;
@@ -489,6 +490,22 @@ static void message_handle_bind(
 
 	wl_resource_set_implementation(
 			resource, &ptychite_message_impl, data, message_handle_server_destroy);
+}
+
+static struct view *element_get_view(struct element *element) {
+	assert(element->type == ELEMENT_VIEW);
+
+	struct view *view = wl_container_of(element, view, element);
+
+	return view;
+}
+
+static struct window *element_get_window(struct element *element) {
+	assert(element->type == ELEMENT_WINDOW);
+
+	struct window *window = wl_container_of(element, window, element);
+
+	return window;
 }
 
 static void buffer_destroy(struct wlr_buffer *buffer) {
@@ -1720,21 +1737,47 @@ static void view_focus(struct view *view, struct wlr_surface *surface) {
 	struct ptychite_server *server = view->server;
 	struct wlr_seat *seat = server->seat;
 	struct wlr_surface *prev_surface = seat->keyboard_state.focused_surface;
+	struct ptychite_config *config = server->compositor->config;
 
 	if (prev_surface == surface) {
 		return;
 	}
 	if (prev_surface) {
-		struct wlr_xdg_surface *previous =
+		struct wlr_xdg_surface *prev_xdg_surface =
 				wlr_xdg_surface_try_from_wlr_surface(seat->keyboard_state.focused_surface);
-		assert(previous && previous->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL);
-		wlr_xdg_toplevel_set_activated(previous->toplevel, false);
+		assert(prev_xdg_surface && prev_xdg_surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL);
+		wlr_xdg_toplevel_set_activated(prev_xdg_surface->toplevel, false);
+
+		struct wlr_scene_tree *scene_tree = prev_xdg_surface->data;
+		struct element *element = scene_tree->node.data;
+		if (element) {
+			struct view *prev_view = element_get_view(element);
+			prev_view->focused = false;
+			wlr_scene_rect_set_color(prev_view->border.top, config->views.border.colors.inactive);
+			wlr_scene_rect_set_color(prev_view->border.right, config->views.border.colors.inactive);
+			wlr_scene_rect_set_color(
+					prev_view->border.bottom, config->views.border.colors.inactive);
+			wlr_scene_rect_set_color(prev_view->border.left, config->views.border.colors.inactive);
+			if (prev_view->title_bar &&
+					prev_view->title_bar->base.element.scene_tree->node.enabled) {
+				window_relay_draw_same_size(&prev_view->title_bar->base);
+			}
+		}
 	}
 
+	view->focused = true;
 	wlr_scene_node_raise_to_top(&view->element.scene_tree->node);
 	wl_list_remove(&view->link);
 	wl_list_insert(&server->views, &view->link);
 	wlr_xdg_toplevel_set_activated(view->xdg_toplevel, true);
+
+	wlr_scene_rect_set_color(view->border.top, config->views.border.colors.active);
+	wlr_scene_rect_set_color(view->border.right, config->views.border.colors.active);
+	wlr_scene_rect_set_color(view->border.bottom, config->views.border.colors.active);
+	wlr_scene_rect_set_color(view->border.left, config->views.border.colors.active);
+	if (view->title_bar && view->title_bar->base.element.scene_tree->node.enabled) {
+		window_relay_draw_same_size(&view->title_bar->base);
+	}
 
 	struct wlr_keyboard *keyboard = wlr_seat_get_keyboard(seat);
 	if (keyboard) {
@@ -1869,7 +1912,8 @@ static void title_bar_draw(
 	struct ptychite_server *server = title_bar->view->server;
 	struct ptychite_config *config = server->compositor->config;
 
-	float *background = config->views.border.colors.inactive;
+	float *background = title_bar->view->focused ? config->views.border.colors.active
+												 : config->views.border.colors.inactive;
 	float *foreground = config->panel.colors.foreground;
 	float *close = config->views.title_bar.colors.close;
 
@@ -1979,22 +2023,6 @@ static const struct window_impl title_bar_window_impl = {
 		.handle_pointer_button = title_bar_handle_pointer_button,
 		.destroy = title_bar_destroy,
 };
-
-static struct view *element_get_view(struct element *element) {
-	assert(element->type == ELEMENT_VIEW);
-
-	struct view *view = wl_container_of(element, view, element);
-
-	return view;
-}
-
-static struct window *element_get_window(struct element *element) {
-	assert(element->type == ELEMENT_WINDOW);
-
-	struct window *window = wl_container_of(element, window, element);
-
-	return window;
-}
 
 static void server_activate_monitor(struct ptychite_server *server, struct monitor *monitor) {
 	server->active_monitor = monitor;
@@ -2426,7 +2454,8 @@ static void server_handle_new_xdg_surface(struct wl_listener *listener, void *da
 				wlr_xdg_surface_try_from_wlr_surface(xdg_surface->popup->parent);
 		assert(parent);
 		struct wlr_scene_tree *parent_tree = parent->data;
-		xdg_surface->data = wlr_scene_xdg_surface_create(parent_tree, xdg_surface);
+		struct wlr_scene_tree *scene_tree = wlr_scene_xdg_surface_create(parent_tree, xdg_surface);
+		xdg_surface->data = scene_tree;
 		return;
 	}
 	assert(xdg_surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL);
