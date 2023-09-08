@@ -978,6 +978,14 @@ static int config_set_tiling_gaps(struct ptychite_config *config, struct json_ob
 	}
 	int gaps = json_object_get_int(value);
 
+	if (gaps < 0) {
+		*error = "tiling gaps must not be negative";
+		return -1;
+	} else if (gaps > 200) {
+		*error = "tiling gaps must be less than or equal to 200";
+		return -1;
+	}
+
 	config->tiling.gaps = gaps;
 
 	if (config->compositor) {
