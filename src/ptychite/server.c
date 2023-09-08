@@ -2647,13 +2647,31 @@ static void server_handle_seat_request_set_selection(struct wl_listener *listene
 	wlr_seat_set_selection(server->seat, event->source, event->serial);
 }
 
-static struct view *server_get_focused_view(struct ptychite_server *server) {
+static struct view *server_get_top_view(struct ptychite_server *server) {
 	struct view *view;
 	wl_list_for_each(view, &server->views, link) {
 		return view;
 	}
 
 	return NULL;
+}
+
+static struct view *server_get_focused_view(struct ptychite_server *server) {
+	struct wlr_surface *surface = server->seat->keyboard_state.focused_surface;
+	if (!surface) {
+		return NULL;
+	}
+
+	struct view *view = server_get_top_view(server);
+	if (!view) {
+		return NULL;
+	}
+
+	if (view->xdg_toplevel->base->surface != surface) {
+		return NULL;
+	}
+
+	return view;
 }
 
 static void server_tiling_change_views_in_master(struct ptychite_server *server, int delta) {

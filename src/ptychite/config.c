@@ -1344,13 +1344,13 @@ int ptychite_config_init(struct ptychite_config *config, struct ptychite_composi
 	config->views.title_bar.colors.close[2] = 0.2;
 	config->views.title_bar.colors.close[3] = 1.0;
 	config->views.border.thickness = 2;
-	config->views.border.colors.active[0] = 0.2;
-	config->views.border.colors.active[1] = 0.3;
-	config->views.border.colors.active[2] = 0.8;
-	config->views.border.colors.active[3] = 0.5;
-	config->views.border.colors.inactive[0] = 0.5;
-	config->views.border.colors.inactive[1] = 0.5;
-	config->views.border.colors.inactive[2] = 0.5;
+	config->views.border.colors.active[0] = 0.3;
+	config->views.border.colors.active[1] = 0.4;
+	config->views.border.colors.active[2] = 0.5;
+	config->views.border.colors.active[3] = 1.0;
+	config->views.border.colors.inactive[0] = 0.3;
+	config->views.border.colors.inactive[1] = 0.3;
+	config->views.border.colors.inactive[2] = 0.3;
 	config->views.border.colors.inactive[3] = 1.0;
 
 	config->monitors.default_scale = 1.0;
