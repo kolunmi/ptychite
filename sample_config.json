@@ -63,6 +63,30 @@
 				"action":[
 					"inc_mfact"
 				]
+			},
+			{
+				"pattern":"S-r",
+				"action":[
+					"toggle_rmaster"
+				]
+			},
+			{
+				"pattern":"S-f",
+				"action":[
+					"next_workspace"
+				]
+			},
+			{
+				"pattern":"S-b",
+				"action":[
+					"prev_workspace"
+				]
+			},
+			{
+				"pattern":"S-a",
+				"action":[
+					"add_workspace"
+				]
 			}
 		]
 	},
@@ -81,11 +105,18 @@
 		}
 	},
 	"views":{
+		"map_to_front":true,
+		"title_bar":{
+			"enabled":true,
+			"colors":{
+				"close":"#cc0033ff"
+			}
+		},
 		"border":{
 			"thickness":2,
 			"colors":{
-				"active":"#334ccc7f",
-				"inactive":"#7f7f7fff"
+				"active":"#4c667fff",
+				"inactive":"#4c4c4cff"
 			}
 		}
 	},
