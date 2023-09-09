@@ -37,4 +37,10 @@ void ptychite_server_tiling_toggle_right_master(struct ptychite_server *server);
 
 void ptychite_server_check_cursor(struct ptychite_server *server);
 
+void ptychite_server_goto_next_workspace(struct ptychite_server *server);
+
+void ptychite_server_goto_previous_workspace(struct ptychite_server *server);
+
+void ptychite_server_add_workspace(struct ptychite_server *server);
+
 #endif

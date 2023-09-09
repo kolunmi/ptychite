@@ -137,16 +137,9 @@ struct ptychite_server {
 	const char *control_greeting;
 };
 
-struct monitor {
+struct workspace {
 	struct wl_list link;
-	struct ptychite_server *server;
-	struct wlr_output *output;
-	struct wlr_box geometry;
-	struct wlr_box window_geometry;
-	struct wallpaper *wallpaper;
-	struct panel *panel;
 	struct wl_list views;
-
 	struct {
 		struct {
 			int views_in_master;
@@ -154,6 +147,19 @@ struct monitor {
 			bool right_master;
 		} traditional;
 	} tiling;
+};
+
+struct monitor {
+	struct wl_list link;
+	struct ptychite_server *server;
+	struct wlr_output *output;
+	struct wlr_box geometry;
+	struct wlr_box window_geometry;
+	struct wl_list views;
+	struct wl_list workspaces;
+	struct workspace *current_workspace;
+	struct wallpaper *wallpaper;
+	struct panel *panel;
 
 	struct wl_listener frame;
 	struct wl_listener request_state;
@@ -180,6 +186,7 @@ struct view {
 	struct element element;
 	struct wl_list link;
 	struct wl_list monitor_link;
+	struct wl_list workspace_link;
 
 	struct ptychite_server *server;
 	struct monitor *monitor;
@@ -670,6 +677,30 @@ static int cairo_draw_text_center(cairo_t *cairo, int y, int geom_x, int geom_wi
 		}
 
 		int x = geom_x + (geom_width - w) / 2;
+		cairo_move_to(cairo, x, y);
+		if (x_out) {
+			*x_out = x;
+		}
+		return cairo_draw_text(
+				cairo, font, text, foreground, background, scale, markup, NULL, NULL);
+	}
+
+	return -1;
+}
+
+static int cairo_draw_text_right(cairo_t *cairo, int y, int right_x, int *x_out,
+		PangoFontDescription *font, const char *text, float foreground[4], float background[4],
+		double scale, bool markup, int *width, int *height) {
+	int w, h;
+	if (!cairo_get_text_size(cairo, font, text, scale, markup, &w, &h)) {
+		if (width) {
+			*width = w;
+		}
+		if (height) {
+			*height = h;
+		}
+
+		int x = right_x - w;
 		cairo_move_to(cairo, x, y);
 		if (x_out) {
 			*x_out = x;
@@ -1204,6 +1235,15 @@ static void panel_draw(
 		g_error_free(error);
 	}
 
+	cairo_set_source_rgba(cairo, foreground[0], foreground[1], foreground[2], foreground[3]);
+	struct workspace *workspace;
+	wl_list_for_each(workspace, &panel->monitor->workspaces, link) {
+		int radius = font_height / (workspace == panel->monitor->current_workspace ? 5 : 10);
+		cairo_arc(cairo, x, surface_height / 2.0, radius, 0, PI * 2);
+		cairo_fill(cairo);
+		x += font_height / 2;
+	}
+
 	if (server->keys.size) {
 		struct ptychite_chord chord = {
 				.keys = server->keys.data,
@@ -1211,19 +1251,9 @@ static void panel_draw(
 		};
 		char *chord_string = ptychite_chord_get_pattern(&chord);
 		if (chord_string) {
-			cairo_move_to(cairo, x, y);
-			cairo_draw_text(cairo, font->font, chord_string, foreground, chord_color, scale, false,
-					NULL, NULL);
+			cairo_draw_text_right(cairo, y, surface_width - font_height, NULL, font->font,
+					chord_string, foreground, chord_color, scale, false, NULL, NULL);
 			free(chord_string);
-		}
-	}
-
-	if (true) {
-		int width;
-		if (!cairo_get_text_size(cairo, font->font, "status", scale, false, &width, NULL)) {
-			cairo_move_to(cairo, surface_width - width - font_height / 2.0, y);
-			cairo_draw_text(
-					cairo, font->font, "status", foreground, NULL, scale, false, NULL, NULL);
 		}
 	}
 
@@ -1425,7 +1455,7 @@ static void control_show(struct control *control) {
 	wlr_scene_node_set_enabled(&control->base.element.scene_tree->node, true);
 	struct monitor *monitor = control->base.server->active_monitor;
 	if (monitor && monitor->panel && monitor->panel->base.element.scene_tree->node.enabled) {
-		panel_draw_auto(control->base.server->active_monitor->panel);
+		window_relay_draw_same_size(&monitor->panel->base);
 	}
 }
 
@@ -1433,7 +1463,7 @@ static void control_hide(struct control *control) {
 	wlr_scene_node_set_enabled(&control->base.element.scene_tree->node, false);
 	struct monitor *monitor = control->base.server->active_monitor;
 	if (monitor && monitor->panel && monitor->panel->base.element.scene_tree->node.enabled) {
-		panel_draw_auto(control->base.server->active_monitor->panel);
+		window_relay_draw_same_size(&monitor->panel->base);
 	}
 }
 
@@ -1612,8 +1642,25 @@ static void view_resize(struct view *view, int width, int height) {
 			view->element.height - (top_thickness + border_thickness));
 }
 
+static struct workspace *monitor_add_workspace(struct monitor *monitor) {
+	struct workspace *workspace = calloc(1, sizeof(struct workspace));
+	if (!workspace) {
+		return NULL;
+	}
+
+	wl_list_init(&workspace->views);
+	workspace->tiling.traditional.views_in_master = 1;
+	workspace->tiling.traditional.master_factor = 0.55;
+	workspace->tiling.traditional.right_master = false;
+
+	wl_list_insert(monitor->workspaces.prev, &workspace->link);
+
+	return workspace;
+}
+
 static void monitor_tile(struct monitor *monitor) {
-	if (wl_list_empty(&monitor->views)) {
+	struct workspace *workspace = monitor->current_workspace;
+	if (wl_list_empty(&workspace->views)) {
 		return;
 	}
 
@@ -1624,10 +1671,10 @@ static void monitor_tile(struct monitor *monitor) {
 	case PTYCHITE_TILING_NONE:
 		break;
 	case PTYCHITE_TILING_TRADITIONAL: {
-		int views_len = wl_list_length(&monitor->views);
-		int views_in_master = monitor->tiling.traditional.views_in_master;
-		double master_factor = monitor->tiling.traditional.master_factor;
-		bool right_master = monitor->tiling.traditional.right_master;
+		int views_len = wl_list_length(&workspace->views);
+		int views_in_master = workspace->tiling.traditional.views_in_master;
+		double master_factor = workspace->tiling.traditional.master_factor;
+		bool right_master = workspace->tiling.traditional.right_master;
 
 		int master_width;
 		if (views_len > views_in_master) {
@@ -1644,7 +1691,7 @@ static void monitor_tile(struct monitor *monitor) {
 		int stack_y = gaps;
 		int i = 0;
 		struct view *view;
-		wl_list_for_each(view, &monitor->views, monitor_link) {
+		wl_list_for_each(view, &workspace->views, workspace_link) {
 			if (i < views_in_master) {
 				int r = fmin(views_len, views_in_master) - i;
 				int height = (monitor->window_geometry.height - master_y - gaps * r) / r;
@@ -1670,6 +1717,26 @@ static void monitor_tile(struct monitor *monitor) {
 	ptychite_server_check_cursor(monitor->server);
 }
 
+static int monitor_switch_workspace(struct monitor *monitor, struct workspace *workspace) {
+	struct workspace *last_workspace = monitor->current_workspace;
+	monitor->current_workspace = workspace;
+
+	struct view *view;
+	wl_list_for_each(view, &last_workspace->views, workspace_link) {
+		wlr_scene_node_set_enabled(&view->element.scene_tree->node, false);
+	}
+	wl_list_for_each(view, &monitor->current_workspace->views, workspace_link) {
+		wlr_scene_node_set_enabled(&view->element.scene_tree->node, true);
+	}
+
+	monitor_tile(monitor);
+	if (monitor->panel && monitor->panel->base.scene_buffer->node.enabled) {
+		window_relay_draw_same_size(&monitor->panel->base);
+	}
+
+	return 0;
+}
+
 static void monitor_disable(struct monitor *monitor) {
 	struct ptychite_server *server = monitor->server;
 
@@ -1688,6 +1755,8 @@ static void monitor_disable(struct monitor *monitor) {
 		struct view *view, *view_tmp;
 		wl_list_for_each_safe(view, view_tmp, &monitor->views, monitor_link) {
 			wl_list_insert(&server->active_monitor->views, &view->monitor_link);
+			wl_list_insert(
+					&server->active_monitor->current_workspace->views, &view->workspace_link);
 		}
 		monitor_tile(server->active_monitor);
 	}
@@ -1825,10 +1894,12 @@ static void view_handle_map(struct wl_listener *listener, void *data) {
 	wl_list_insert(&view->server->views, &view->link);
 	if (view->server->active_monitor) {
 		view->monitor = view->server->active_monitor;
+		wl_list_insert(&view->monitor->views, &view->monitor_link);
+		struct workspace *workspace = view->monitor->current_workspace;
 		if (!config->views.map_to_front) {
-			wl_list_insert(view->monitor->views.prev, &view->monitor_link);
+			wl_list_insert(workspace->views.prev, &view->workspace_link);
 		} else {
-			wl_list_insert(&view->monitor->views, &view->monitor_link);
+			wl_list_insert(&workspace->views, &view->workspace_link);
 		}
 	}
 	view->set_title.notify = view_handle_set_title;
@@ -1868,6 +1939,7 @@ static void view_handle_unmap(struct wl_listener *listener, void *data) {
 	}
 
 	// wl_list_remove(&view->commit.link);
+	wl_list_remove(&view->workspace_link);
 	wl_list_remove(&view->monitor_link);
 	wl_list_remove(&view->link);
 	wl_list_remove(&view->set_title.link);
@@ -2204,7 +2276,7 @@ static int server_time_tick_update(void *data) {
 				if (!monitor->panel || !monitor->panel->base.element.scene_tree->node.enabled) {
 					continue;
 				}
-				panel_draw_auto(monitor->panel);
+				window_relay_draw_same_size(&monitor->panel->base);
 			}
 		}
 
@@ -2383,6 +2455,13 @@ static void server_handle_new_output(struct wl_listener *listener, void *data) {
 		return;
 	}
 
+	wl_list_init(&monitor->workspaces);
+	if (!(monitor->current_workspace = monitor_add_workspace(monitor))) {
+		wlr_log(WLR_ERROR, "Could not initialize output: insufficent memory");
+		free(monitor);
+		return;
+	}
+
 	if (!wlr_output_init_render(output, server->allocator, server->renderer)) {
 		wlr_log(WLR_ERROR, "Could not initialize output render");
 		free(monitor);
@@ -2438,9 +2517,6 @@ static void server_handle_new_output(struct wl_listener *listener, void *data) {
 			monitor->panel = NULL;
 		}
 	}
-
-	monitor->tiling.traditional.views_in_master = 1;
-	monitor->tiling.traditional.master_factor = 0.55;
 
 	wlr_output_layout_add_auto(server->output_layout, output);
 }
@@ -2680,18 +2756,19 @@ static void server_tiling_change_views_in_master(struct ptychite_server *server,
 		return;
 	}
 
-	int views_in_master = monitor->tiling.traditional.views_in_master + delta;
+	struct workspace *workspace = monitor->current_workspace;
+	int views_in_master = workspace->tiling.traditional.views_in_master + delta;
 	if (views_in_master > 100) {
 		views_in_master = 100;
 	} else if (views_in_master < 0) {
 		views_in_master = 0;
 	}
 
-	if (views_in_master == monitor->tiling.traditional.views_in_master) {
+	if (views_in_master == workspace->tiling.traditional.views_in_master) {
 		return;
 	}
 
-	monitor->tiling.traditional.views_in_master = views_in_master;
+	workspace->tiling.traditional.views_in_master = views_in_master;
 	monitor_tile(monitor);
 }
 
@@ -2701,18 +2778,19 @@ static void server_tiling_change_master_factor(struct ptychite_server *server, d
 		return;
 	}
 
-	double master_factor = monitor->tiling.traditional.master_factor + delta;
+	struct workspace *workspace = monitor->current_workspace;
+	double master_factor = workspace->tiling.traditional.master_factor + delta;
 	if (master_factor > 0.95) {
 		master_factor = 0.95;
 	} else if (master_factor < 0.05) {
 		master_factor = 0.05;
 	}
 
-	if (master_factor == monitor->tiling.traditional.master_factor) {
+	if (master_factor == workspace->tiling.traditional.master_factor) {
 		return;
 	}
 
-	monitor->tiling.traditional.master_factor = master_factor;
+	workspace->tiling.traditional.master_factor = master_factor;
 	monitor_tile(monitor);
 }
 
@@ -3022,16 +3100,59 @@ void ptychite_server_tiling_decrease_master_factor(struct ptychite_server *serve
 }
 
 void ptychite_server_tiling_toggle_right_master(struct ptychite_server *server) {
-	if (!server->active_monitor) {
+	struct monitor *monitor = server->active_monitor;
+	if (!monitor) {
 		return;
 	}
 
-	server->active_monitor->tiling.traditional.right_master =
-			!server->active_monitor->tiling.traditional.right_master;
+	struct workspace *workspace = monitor->current_workspace;
+	workspace->tiling.traditional.right_master = !workspace->tiling.traditional.right_master;
 
-	monitor_tile(server->active_monitor);
+	monitor_tile(monitor);
 }
 
 void ptychite_server_check_cursor(struct ptychite_server *server) {
 	server_process_cursor_motion(server, 0);
+}
+
+void ptychite_server_goto_next_workspace(struct ptychite_server *server) {
+	struct monitor *monitor = server->active_monitor;
+	if (!monitor) {
+		return;
+	}
+
+	struct wl_list *list = monitor->current_workspace->link.next == &monitor->workspaces
+			? monitor->current_workspace->link.next->next
+			: monitor->current_workspace->link.next;
+	struct workspace *workspace = wl_container_of(list, workspace, link);
+
+	monitor_switch_workspace(monitor, workspace);
+}
+
+void ptychite_server_goto_previous_workspace(struct ptychite_server *server) {
+	struct monitor *monitor = server->active_monitor;
+	if (!monitor) {
+		return;
+	}
+
+	struct wl_list *list = monitor->current_workspace->link.prev == &monitor->workspaces
+			? monitor->current_workspace->link.prev->prev
+			: monitor->current_workspace->link.prev;
+	struct workspace *workspace = wl_container_of(list, workspace, link);
+
+	monitor_switch_workspace(monitor, workspace);
+}
+
+void ptychite_server_add_workspace(struct ptychite_server *server) {
+	struct monitor *monitor = server->active_monitor;
+	if (!monitor) {
+		return;
+	}
+
+	struct workspace *workspace = monitor_add_workspace(monitor);
+	if (!workspace) {
+		return;
+	}
+
+	monitor_switch_workspace(monitor, workspace);
 }
