@@ -1717,7 +1717,26 @@ static void monitor_tile(struct monitor *monitor) {
 	ptychite_server_check_cursor(monitor->server);
 }
 
-static int monitor_switch_workspace(struct monitor *monitor, struct workspace *workspace) {
+static void monitor_fix_workspaces(struct monitor *monitor) {
+	struct workspace *end_workspace =
+			wl_container_of(monitor->workspaces.prev, end_workspace, link);
+
+	struct workspace *workspace, *workspace_tmp;
+	wl_list_for_each_safe(workspace, workspace_tmp, &monitor->workspaces, link) {
+		if (workspace == end_workspace) {
+			break;
+		}
+		if (workspace == monitor->current_workspace) {
+			continue;
+		}
+		if (wl_list_empty(&workspace->views)) {
+			wl_list_remove(&workspace->link);
+			free(workspace);
+		}
+	}
+}
+
+static void monitor_switch_workspace(struct monitor *monitor, struct workspace *workspace) {
 	struct workspace *last_workspace = monitor->current_workspace;
 	monitor->current_workspace = workspace;
 
@@ -1729,12 +1748,11 @@ static int monitor_switch_workspace(struct monitor *monitor, struct workspace *w
 		wlr_scene_node_set_enabled(&view->element.scene_tree->node, true);
 	}
 
+	monitor_fix_workspaces(monitor);
 	monitor_tile(monitor);
 	if (monitor->panel && monitor->panel->base.scene_buffer->node.enabled) {
 		window_relay_draw_same_size(&monitor->panel->base);
 	}
-
-	return 0;
 }
 
 static void monitor_disable(struct monitor *monitor) {
@@ -1752,12 +1770,27 @@ static void monitor_disable(struct monitor *monitor) {
 	}
 
 	if (server->active_monitor) {
+		struct workspace *end_workspace =
+				wl_container_of(monitor->workspaces.prev, end_workspace, link);
+		wl_list_init(&end_workspace->views);
+
+		struct workspace *workspace;
+		wl_list_for_each(workspace, &monitor->workspaces, link) {
+			if (workspace == end_workspace) {
+				break;
+			}
+			wl_list_remove(&workspace->link);
+			free(workspace);
+		}
+
 		struct view *view, *view_tmp;
 		wl_list_for_each_safe(view, view_tmp, &monitor->views, monitor_link) {
 			wl_list_insert(&server->active_monitor->views, &view->monitor_link);
 			wl_list_insert(
 					&server->active_monitor->current_workspace->views, &view->workspace_link);
 		}
+		wl_list_init(&monitor->views);
+
 		monitor_tile(server->active_monitor);
 	}
 }
@@ -1797,6 +1830,12 @@ static void monitor_handle_destroy(struct wl_listener *listener, void *data) {
 		if (monitor->panel) {
 			wlr_scene_node_destroy(&monitor->panel->base.scene_buffer->node);
 		}
+	}
+
+	monitor_disable(monitor);
+	struct workspace *workspace;
+	wl_list_for_each(workspace, &monitor->workspaces, link) {
+		free(workspace);
 	}
 
 	free(monitor);
@@ -1894,8 +1933,16 @@ static void view_handle_map(struct wl_listener *listener, void *data) {
 	wl_list_insert(&view->server->views, &view->link);
 	if (view->server->active_monitor) {
 		view->monitor = view->server->active_monitor;
-		wl_list_insert(&view->monitor->views, &view->monitor_link);
+
 		struct workspace *workspace = view->monitor->current_workspace;
+		struct workspace *end_workspace =
+				wl_container_of(view->monitor->workspaces.prev, end_workspace, link);
+		if (workspace == end_workspace && monitor_add_workspace(view->monitor) &&
+				view->monitor->panel && view->monitor->panel->base.scene_buffer->node.enabled) {
+			window_relay_draw_same_size(&view->monitor->panel->base);
+		}
+
+		wl_list_insert(&view->monitor->views, &view->monitor_link);
 		if (!config->views.map_to_front) {
 			wl_list_insert(workspace->views.prev, &view->workspace_link);
 		} else {
@@ -1938,7 +1985,6 @@ static void view_handle_unmap(struct wl_listener *listener, void *data) {
 		view->server->grabbed_view = NULL;
 	}
 
-	// wl_list_remove(&view->commit.link);
 	wl_list_remove(&view->workspace_link);
 	wl_list_remove(&view->monitor_link);
 	wl_list_remove(&view->link);
@@ -3149,8 +3195,16 @@ void ptychite_server_add_workspace(struct ptychite_server *server) {
 		return;
 	}
 
-	struct workspace *workspace = monitor_add_workspace(monitor);
-	if (!workspace) {
+	struct workspace *end_workspace =
+			wl_container_of(monitor->workspaces.prev, end_workspace, link);
+
+	struct workspace *workspace;
+	if (wl_list_empty(&end_workspace->views)) {
+		if (monitor->current_workspace == end_workspace) {
+			return;
+		}
+		workspace = end_workspace;
+	} else if (!(workspace = monitor_add_workspace(monitor))) {
 		return;
 	}
 
