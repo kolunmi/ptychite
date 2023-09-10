@@ -1,12 +1,12 @@
 <div align="center">
-<img src="/ptychite.png" width=50% height=50%>
+<img src="https://git.sr.ht/~kolunmi/ptychite/blob/main/ptychite.png" width=50% height=50%>
 </div>
 
 # Ptychite
 A flexible, approachable, and powerful wayland compositor. This project is still in its early stages; it's not currently usable as a daily driver, but will be soon!
 
-![screenshot1](/screenshot1.png "screenshot 1")
-![screenshot2](/screenshot2.png "screenshot 2")
+![screenshot1](https://git.sr.ht/~kolunmi/ptychite/blob/main/screenshot1.png "screenshot 1")
+![screenshot2](https://git.sr.ht/~kolunmi/ptychite/blob/main/screenshot2.png "screenshot 2")
 
 ## Project Goals
 * performant
@@ -38,7 +38,7 @@ ptychite should have a robust base-level functionality and be completely usable 
 
 ## Building
 ```bash
-git clone https://github.com/kolunmi/ptychite
+git clone https://git.sr.ht/~kolunmi/ptychite
 cd ptychite
 meson setup build/
 ninja -C build/
