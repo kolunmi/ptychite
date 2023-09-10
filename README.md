@@ -5,6 +5,8 @@
 # Ptychite
 A flexible, approachable, and powerful wayland compositor. This project is still in its early stages; it's not currently usable as a daily driver, but will be soon!
 
+Note: ptychite is developed on [sr.ht](https://git.sr.ht/~kolunmi/ptychite).
+
 ![screenshot](https://git.sr.ht/~kolunmi/ptychite/blob/main/screenshot.png "screenshot")
 
 ## Project Goals
