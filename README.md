@@ -5,8 +5,7 @@
 # Ptychite
 A flexible, approachable, and powerful wayland compositor. This project is still in its early stages; it's not currently usable as a daily driver, but will be soon!
 
-![screenshot1](https://git.sr.ht/~kolunmi/ptychite/blob/main/screenshot1.png "screenshot 1")
-![screenshot2](https://git.sr.ht/~kolunmi/ptychite/blob/main/screenshot2.png "screenshot 2")
+![screenshot](https://git.sr.ht/~kolunmi/ptychite/blob/main/screenshot.png "screenshot")
 
 ## Project Goals
 * performant
