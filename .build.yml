@@ -1,0 +1,16 @@
+image: alpine/edge
+secrets:
+  - 96f9b30e-3dcb-4c3e-a62e-7c9c45074a26
+sources:
+  - git+ssh://git@git.sr.ht/~kolunmi/ptychite
+tasks:
+  - check: |
+      cd ptychite
+      if [ "$(git rev-parse origin/main)" != "$(git rev-parse HEAD)" ]; then \
+        complete-build; \
+      fi
+  - mirror: |
+      cd ptychite
+      git remote add github git@github.com:kolunmi/ptychite.git
+      ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts
+      git push github main
