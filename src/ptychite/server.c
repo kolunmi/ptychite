@@ -2770,6 +2770,15 @@ static void server_handle_seat_request_set_selection(struct wl_listener *listene
 }
 
 static struct view *server_get_top_view(struct ptychite_server *server) {
+	if (server->active_monitor) {
+		struct view *view;
+		wl_list_for_each(view, &server->active_monitor->current_workspace->views, workspace_link) {
+			return view;
+		}
+
+		return NULL;
+	}
+
 	struct view *view;
 	wl_list_for_each(view, &server->views, link) {
 		return view;
