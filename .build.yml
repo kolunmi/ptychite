@@ -1,8 +1,8 @@
 image: alpine/edge
 secrets:
-  - 96f9b30e-3dcb-4c3e-a62e-7c9c45074a26
+  - 78e00029-f203-4008-982f-81d31f756411
 sources:
-  - git+ssh://git@git.sr.ht/~kolunmi/ptychite
+  - https://git.sr.ht/~kolunmi/ptychite
 tasks:
   - check: |
       cd ptychite
