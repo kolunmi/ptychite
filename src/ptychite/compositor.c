@@ -84,10 +84,6 @@ static void compositor_action_goto_previous_workspace(
 	ptychite_server_goto_previous_workspace(compositor->server);
 }
 
-static void compositor_action_add_workspace(struct ptychite_compositor *compositor, void *data) {
-	ptychite_server_add_workspace(compositor->server);
-}
-
 static const struct {
 	char *name;
 	ptychite_action_func_t action_func;
@@ -106,7 +102,6 @@ static const struct {
 		{"next_workspace", compositor_action_goto_next_workspace, PTYCHITE_ACTION_FUNC_DATA_NONE},
 		{"prev_workspace", compositor_action_goto_previous_workspace,
 				PTYCHITE_ACTION_FUNC_DATA_NONE},
-		{"add_workspace", compositor_action_add_workspace, PTYCHITE_ACTION_FUNC_DATA_NONE},
 };
 
 int ptychite_compositor_init(struct ptychite_compositor *compositor) {

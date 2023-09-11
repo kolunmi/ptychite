@@ -3197,25 +3197,3 @@ void ptychite_server_goto_previous_workspace(struct ptychite_server *server) {
 
 	monitor_switch_workspace(monitor, workspace);
 }
-
-void ptychite_server_add_workspace(struct ptychite_server *server) {
-	struct monitor *monitor = server->active_monitor;
-	if (!monitor) {
-		return;
-	}
-
-	struct workspace *end_workspace =
-			wl_container_of(monitor->workspaces.prev, end_workspace, link);
-
-	struct workspace *workspace;
-	if (wl_list_empty(&end_workspace->views)) {
-		if (monitor->current_workspace == end_workspace) {
-			return;
-		}
-		workspace = end_workspace;
-	} else if (!(workspace = monitor_add_workspace(monitor))) {
-		return;
-	}
-
-	monitor_switch_workspace(monitor, workspace);
-}
