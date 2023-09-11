@@ -2,6 +2,8 @@
 <img src="https://git.sr.ht/~kolunmi/ptychite/blob/main/ptychite.png" width=50% height=50%>
 </div>
 
+[![builds.sr.ht status](https://builds.sr.ht/~kolunmi/ptychite/.svg)](https://builds.sr.ht/~kolunmi/ptychite/?)
+
 # Ptychite
 A flexible, approachable, and powerful wayland compositor. This project is still in its early stages; it's not currently usable as a daily driver, but will be soon!
 
