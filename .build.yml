@@ -4,11 +4,6 @@ secrets:
 sources:
   - https://git.sr.ht/~kolunmi/ptychite
 tasks:
-  - check: |
-      cd ptychite
-      if [ "$(git rev-parse origin/main)" != "$(git rev-parse HEAD)" ]; then \
-        complete-build; \
-      fi
   - mirror: |
       cd ptychite
       git remote add github git@github.com:kolunmi/ptychite.git

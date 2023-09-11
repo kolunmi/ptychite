@@ -14,6 +14,7 @@ Note: ptychite is developed on [sr.ht](https://git.sr.ht/~kolunmi/ptychite).
 * easy to use and configure
 * built-in panel, wallpaper, control center, screenshotting-tool, etc
 * optional mosaic and traditional window tiling
+* optional server-side decorations
 * a consistent and comfortable aesthetic design
 * basic animations, rounded corners, and blur
 * gnome-like workspace management, with the zoom out effect
