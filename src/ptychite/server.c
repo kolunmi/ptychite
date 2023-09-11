@@ -1547,7 +1547,12 @@ static void keyboard_handle_key(struct wl_listener *listener, void *data) {
 		}
 
 		if (server->keys.size != old_keys_size) {
-			ptychite_server_configure_panels(server);
+			struct monitor *monitor;
+			wl_list_for_each(monitor, &server->monitors, link) {
+				if (monitor->panel && monitor->panel->base.element.scene_tree->node.enabled) {
+					window_relay_draw_same_size(&monitor->panel->base);
+				}
+			}
 		}
 	}
 
