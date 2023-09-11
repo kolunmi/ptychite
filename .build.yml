@@ -1,9 +1,28 @@
 image: alpine/edge
+packages:
+  - meson
+  - ninja
+  - wayland-dev
+  - wayland-protocols
+  - pixman-dev
+  - cairo-dev
+  - pango-dev
+  - json-c-dev
+  - libxkbcommon-dev
+  - libdrm-dev
+  - librsvg-dev
+  - mesa-dev
+  - libseat-dev
+  - libinput-dev
 secrets:
   - 78e00029-f203-4008-982f-81d31f756411
 sources:
   - https://git.sr.ht/~kolunmi/ptychite
 tasks:
+  - build: |
+      cd ptychite
+      meson setup build/
+      ninja -C build/
   - mirror: |
       cd ptychite
       git remote add github git@github.com:kolunmi/ptychite.git
