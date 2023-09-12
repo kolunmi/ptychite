@@ -62,11 +62,11 @@ enum element_type {
 	ELEMENT_WINDOW,
 };
 
-enum ptychite_action_func_data_mode {
-	PTYCHITE_ACTION_FUNC_DATA_NONE,
-	PTYCHITE_ACTION_FUNC_DATA_INT,
-	PTYCHITE_ACTION_FUNC_DATA_STRING,
-	PTYCHITE_ACTION_FUNC_DATA_ARGV,
+enum action_func_data_mode {
+	ACTION_FUNC_DATA_NONE,
+	ACTION_FUNC_DATA_INT,
+	ACTION_FUNC_DATA_STRING,
+	ACTION_FUNC_DATA_ARGV,
 };
 
 typedef void (*action_func_t)(struct ptychite_server *compositor, void *data);
@@ -3096,22 +3096,22 @@ static void server_action_focus_previous_view(struct ptychite_server *server, vo
 static const struct {
 	char *name;
 	action_func_t action_func;
-	enum ptychite_action_func_data_mode data_mode;
+	enum action_func_data_mode data_mode;
 } ptychite_action_name_table[] = {
-		{"terminate", server_action_terminate, PTYCHITE_ACTION_FUNC_DATA_NONE},
-		{"close", server_action_close, PTYCHITE_ACTION_FUNC_DATA_NONE},
-		{"control", server_action_toggle_control, PTYCHITE_ACTION_FUNC_DATA_NONE},
-		{"spawn", server_action_spawn, PTYCHITE_ACTION_FUNC_DATA_ARGV},
-		{"shell", server_action_shell, PTYCHITE_ACTION_FUNC_DATA_STRING},
-		{"inc_master", server_action_inc_master, PTYCHITE_ACTION_FUNC_DATA_NONE},
-		{"dec_master", server_action_dec_master, PTYCHITE_ACTION_FUNC_DATA_NONE},
-		{"inc_mfact", server_action_inc_mfact, PTYCHITE_ACTION_FUNC_DATA_NONE},
-		{"dec_mfact", server_action_dec_mfact, PTYCHITE_ACTION_FUNC_DATA_NONE},
-		{"toggle_rmaster", server_action_toggle_rmaster, PTYCHITE_ACTION_FUNC_DATA_NONE},
-		{"next_workspace", server_action_goto_next_workspace, PTYCHITE_ACTION_FUNC_DATA_NONE},
-		{"prev_workspace", server_action_goto_previous_workspace, PTYCHITE_ACTION_FUNC_DATA_NONE},
-		{"next_view", server_action_focus_next_view, PTYCHITE_ACTION_FUNC_DATA_NONE},
-		{"prev_view", server_action_focus_previous_view, PTYCHITE_ACTION_FUNC_DATA_NONE},
+		{"terminate", server_action_terminate, ACTION_FUNC_DATA_NONE},
+		{"close", server_action_close, ACTION_FUNC_DATA_NONE},
+		{"control", server_action_toggle_control, ACTION_FUNC_DATA_NONE},
+		{"spawn", server_action_spawn, ACTION_FUNC_DATA_ARGV},
+		{"shell", server_action_shell, ACTION_FUNC_DATA_STRING},
+		{"inc_master", server_action_inc_master, ACTION_FUNC_DATA_NONE},
+		{"dec_master", server_action_dec_master, ACTION_FUNC_DATA_NONE},
+		{"inc_mfact", server_action_inc_mfact, ACTION_FUNC_DATA_NONE},
+		{"dec_mfact", server_action_dec_mfact, ACTION_FUNC_DATA_NONE},
+		{"toggle_rmaster", server_action_toggle_rmaster, ACTION_FUNC_DATA_NONE},
+		{"next_workspace", server_action_goto_next_workspace, ACTION_FUNC_DATA_NONE},
+		{"prev_workspace", server_action_goto_previous_workspace, ACTION_FUNC_DATA_NONE},
+		{"next_view", server_action_focus_next_view, ACTION_FUNC_DATA_NONE},
+		{"prev_view", server_action_focus_previous_view, ACTION_FUNC_DATA_NONE},
 };
 
 struct ptychite_server *ptychite_server_create(void) {
@@ -3409,7 +3409,7 @@ struct ptychite_action *ptychite_action_create(const char **args, int args_l, ch
 		}
 
 		switch (ptychite_action_name_table[i].data_mode) {
-		case PTYCHITE_ACTION_FUNC_DATA_NONE:
+		case ACTION_FUNC_DATA_NONE:
 			if (args_l != 1) {
 				*error = "actions with data type \"none\" require one argument";
 				goto err;
@@ -3418,7 +3418,7 @@ struct ptychite_action *ptychite_action_create(const char **args, int args_l, ch
 			action->data = NULL;
 			break;
 
-		case PTYCHITE_ACTION_FUNC_DATA_INT:
+		case ACTION_FUNC_DATA_INT:
 			if (args_l != 2) {
 				*error = "actions with data type \"int\" require two arguments";
 				goto err;
@@ -3431,7 +3431,7 @@ struct ptychite_action *ptychite_action_create(const char **args, int args_l, ch
 			*(int *)action->data = atoi(args[1]);
 			break;
 
-		case PTYCHITE_ACTION_FUNC_DATA_STRING:
+		case ACTION_FUNC_DATA_STRING:
 			if (args_l != 2) {
 				*error = "actions with data type \"string\" require two arguments";
 				goto err;
@@ -3443,7 +3443,7 @@ struct ptychite_action *ptychite_action_create(const char **args, int args_l, ch
 			}
 			break;
 
-		case PTYCHITE_ACTION_FUNC_DATA_ARGV:
+		case ACTION_FUNC_DATA_ARGV:
 			if (args_l < 2) {
 				*error = "actions with data type \"argv\" require at least two arguments";
 				goto err;
@@ -3497,18 +3497,18 @@ int ptychite_action_get_args(struct ptychite_action *action, char ***args_out, i
 		}
 
 		int args_l;
-		enum ptychite_action_func_data_mode data_mode = ptychite_action_name_table[i].data_mode;
+		enum action_func_data_mode data_mode = ptychite_action_name_table[i].data_mode;
 		switch (data_mode) {
-		case PTYCHITE_ACTION_FUNC_DATA_NONE:
+		case ACTION_FUNC_DATA_NONE:
 			args_l = 1;
 			break;
 
-		case PTYCHITE_ACTION_FUNC_DATA_INT:
-		case PTYCHITE_ACTION_FUNC_DATA_STRING:
+		case ACTION_FUNC_DATA_INT:
+		case ACTION_FUNC_DATA_STRING:
 			args_l = 2;
 			break;
 
-		case PTYCHITE_ACTION_FUNC_DATA_ARGV:
+		case ACTION_FUNC_DATA_ARGV:
 			for (args_l = 0; ((char **)action->data)[args_l]; args_l++) {
 				;
 			}
@@ -3532,10 +3532,10 @@ int ptychite_action_get_args(struct ptychite_action *action, char ***args_out, i
 		args[0] = name;
 
 		switch (data_mode) {
-		case PTYCHITE_ACTION_FUNC_DATA_NONE:
+		case ACTION_FUNC_DATA_NONE:
 			break;
 
-		case PTYCHITE_ACTION_FUNC_DATA_INT: {
+		case ACTION_FUNC_DATA_INT: {
 			char buffer[64];
 			snprintf(buffer, sizeof(buffer), "%d", *(int *)action->data);
 			if (!(args[1] = strdup(buffer))) {
@@ -3546,7 +3546,7 @@ int ptychite_action_get_args(struct ptychite_action *action, char ***args_out, i
 			break;
 		}
 
-		case PTYCHITE_ACTION_FUNC_DATA_STRING:
+		case ACTION_FUNC_DATA_STRING:
 			if (!(args[1] = strdup(action->data))) {
 				free(name);
 				free(args);
@@ -3554,7 +3554,7 @@ int ptychite_action_get_args(struct ptychite_action *action, char ***args_out, i
 			}
 			break;
 
-		case PTYCHITE_ACTION_FUNC_DATA_ARGV: {
+		case ACTION_FUNC_DATA_ARGV: {
 			int j;
 			for (j = 1; j < args_l; j++) {
 				if (!(args[j] = strdup(((char **)action->data)[j - 1]))) {
@@ -3587,12 +3587,12 @@ void ptychite_action_destroy(struct ptychite_action *action) {
 			continue;
 		}
 		switch (ptychite_action_name_table[i].data_mode) {
-		case PTYCHITE_ACTION_FUNC_DATA_INT:
-		case PTYCHITE_ACTION_FUNC_DATA_STRING:
+		case ACTION_FUNC_DATA_INT:
+		case ACTION_FUNC_DATA_STRING:
 			free(action->data);
 			break;
 
-		case PTYCHITE_ACTION_FUNC_DATA_ARGV: {
+		case ACTION_FUNC_DATA_ARGV: {
 			char **p;
 			for (p = action->data; *p; p++) {
 				free(*p);
@@ -3601,7 +3601,7 @@ void ptychite_action_destroy(struct ptychite_action *action) {
 			break;
 		}
 
-		case PTYCHITE_ACTION_FUNC_DATA_NONE:
+		case ACTION_FUNC_DATA_NONE:
 		default:
 			break;
 		}
