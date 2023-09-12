@@ -139,7 +139,8 @@ struct ptychite_server {
 
 struct workspace {
 	struct wl_list link;
-	struct wl_list views;
+	struct wl_list views_order;
+	struct wl_list views_focus;
 	struct {
 		struct {
 			int views_in_master;
@@ -184,12 +185,14 @@ struct element {
 
 struct view {
 	struct element element;
-	struct wl_list link;
+	struct wl_list server_link;
 	struct wl_list monitor_link;
-	struct wl_list workspace_link;
+	struct wl_list workspace_order_link;
+	struct wl_list workspace_focus_link;
 
 	struct ptychite_server *server;
 	struct monitor *monitor;
+	struct workspace *workspace;
 	struct wlr_xdg_toplevel *xdg_toplevel;
 	struct wlr_scene_tree *scene_tree_surface;
 	struct title_bar *title_bar;
@@ -448,7 +451,7 @@ static void message_dump_views(struct wl_client *client, struct wl_resource *res
 
 		size_t idx = 0;
 		struct view *view;
-		wl_list_for_each(view, &server->views, link) {
+		wl_list_for_each(view, &server->views, server_link) {
 			struct json_object *description = view_describe(view);
 			if (!description) {
 				json_object_put(array);
@@ -1647,13 +1650,73 @@ static void view_resize(struct view *view, int width, int height) {
 			view->element.height - (top_thickness + border_thickness));
 }
 
+static void surface_unfocus(struct wlr_surface *surface) {
+	struct wlr_xdg_surface *xdg_surface = wlr_xdg_surface_try_from_wlr_surface(surface);
+	assert(xdg_surface && xdg_surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL);
+	wlr_xdg_toplevel_set_activated(xdg_surface->toplevel, false);
+
+	struct wlr_scene_tree *scene_tree = xdg_surface->data;
+	struct element *element = scene_tree->node.data;
+	if (element) {
+		struct view *view = element_get_view(element);
+		struct ptychite_config *config = view->server->compositor->config;
+		view->focused = false;
+		wlr_scene_rect_set_color(view->border.top, config->views.border.colors.inactive);
+		wlr_scene_rect_set_color(view->border.right, config->views.border.colors.inactive);
+		wlr_scene_rect_set_color(view->border.bottom, config->views.border.colors.inactive);
+		wlr_scene_rect_set_color(view->border.left, config->views.border.colors.inactive);
+		if (view->title_bar && view->title_bar->base.element.scene_tree->node.enabled) {
+			window_relay_draw_same_size(&view->title_bar->base);
+		}
+	}
+}
+
+static void view_focus(struct view *view, struct wlr_surface *surface) {
+	struct ptychite_server *server = view->server;
+	struct wlr_seat *seat = server->seat;
+	struct wlr_surface *prev_surface = seat->keyboard_state.focused_surface;
+	struct ptychite_config *config = server->compositor->config;
+
+	if (prev_surface == surface) {
+		return;
+	}
+	if (prev_surface) {
+		surface_unfocus(prev_surface);
+	}
+
+	view->focused = true;
+	wlr_scene_node_raise_to_top(&view->element.scene_tree->node);
+	wl_list_remove(&view->server_link);
+	wl_list_insert(&server->views, &view->server_link);
+	if (view->workspace) {
+		wl_list_remove(&view->workspace_focus_link);
+		wl_list_insert(&view->workspace->views_focus, &view->workspace_focus_link);
+	}
+	wlr_xdg_toplevel_set_activated(view->xdg_toplevel, true);
+
+	wlr_scene_rect_set_color(view->border.top, config->views.border.colors.active);
+	wlr_scene_rect_set_color(view->border.right, config->views.border.colors.active);
+	wlr_scene_rect_set_color(view->border.bottom, config->views.border.colors.active);
+	wlr_scene_rect_set_color(view->border.left, config->views.border.colors.active);
+	if (view->title_bar && view->title_bar->base.element.scene_tree->node.enabled) {
+		window_relay_draw_same_size(&view->title_bar->base);
+	}
+
+	struct wlr_keyboard *keyboard = wlr_seat_get_keyboard(seat);
+	if (keyboard) {
+		wlr_seat_keyboard_notify_enter(seat, view->xdg_toplevel->base->surface, keyboard->keycodes,
+				keyboard->num_keycodes, &keyboard->modifiers);
+	}
+}
+
 static struct workspace *monitor_add_workspace(struct monitor *monitor) {
 	struct workspace *workspace = calloc(1, sizeof(struct workspace));
 	if (!workspace) {
 		return NULL;
 	}
 
-	wl_list_init(&workspace->views);
+	wl_list_init(&workspace->views_order);
+	wl_list_init(&workspace->views_focus);
 	workspace->tiling.traditional.views_in_master = 1;
 	workspace->tiling.traditional.master_factor = 0.55;
 	workspace->tiling.traditional.right_master = false;
@@ -1665,7 +1728,7 @@ static struct workspace *monitor_add_workspace(struct monitor *monitor) {
 
 static void monitor_tile(struct monitor *monitor) {
 	struct workspace *workspace = monitor->current_workspace;
-	if (wl_list_empty(&workspace->views)) {
+	if (wl_list_empty(&workspace->views_order)) {
 		return;
 	}
 
@@ -1676,7 +1739,7 @@ static void monitor_tile(struct monitor *monitor) {
 	case PTYCHITE_TILING_NONE:
 		break;
 	case PTYCHITE_TILING_TRADITIONAL: {
-		int views_len = wl_list_length(&workspace->views);
+		int views_len = wl_list_length(&workspace->views_order);
 		int views_in_master = workspace->tiling.traditional.views_in_master;
 		double master_factor = workspace->tiling.traditional.master_factor;
 		bool right_master = workspace->tiling.traditional.right_master;
@@ -1696,7 +1759,7 @@ static void monitor_tile(struct monitor *monitor) {
 		int stack_y = gaps;
 		int i = 0;
 		struct view *view;
-		wl_list_for_each(view, &workspace->views, workspace_link) {
+		wl_list_for_each(view, &workspace->views_order, workspace_order_link) {
 			if (i < views_in_master) {
 				int r = fmin(views_len, views_in_master) - i;
 				int height = (monitor->window_geometry.height - master_y - gaps * r) / r;
@@ -1734,7 +1797,7 @@ static void monitor_fix_workspaces(struct monitor *monitor) {
 		if (workspace == monitor->current_workspace) {
 			continue;
 		}
-		if (wl_list_empty(&workspace->views)) {
+		if (wl_list_empty(&workspace->views_order)) {
 			wl_list_remove(&workspace->link);
 			free(workspace);
 		}
@@ -1746,10 +1809,10 @@ static void monitor_switch_workspace(struct monitor *monitor, struct workspace *
 	monitor->current_workspace = workspace;
 
 	struct view *view;
-	wl_list_for_each(view, &last_workspace->views, workspace_link) {
+	wl_list_for_each(view, &last_workspace->views_order, workspace_order_link) {
 		wlr_scene_node_set_enabled(&view->element.scene_tree->node, false);
 	}
-	wl_list_for_each(view, &monitor->current_workspace->views, workspace_link) {
+	wl_list_for_each(view, &monitor->current_workspace->views_order, workspace_order_link) {
 		wlr_scene_node_set_enabled(&view->element.scene_tree->node, true);
 	}
 
@@ -1757,6 +1820,18 @@ static void monitor_switch_workspace(struct monitor *monitor, struct workspace *
 	monitor_tile(monitor);
 	if (monitor->panel && monitor->panel->base.scene_buffer->node.enabled) {
 		window_relay_draw_same_size(&monitor->panel->base);
+	}
+
+	if (wl_list_empty(&monitor->current_workspace->views_focus)) {
+		struct wlr_surface *focused_surface = monitor->server->seat->keyboard_state.focused_surface;
+		if (focused_surface) {
+			surface_unfocus(focused_surface);
+			wlr_seat_keyboard_notify_clear_focus(monitor->server->seat);
+		}
+	} else {
+		struct view *new_view = wl_container_of(
+				monitor->current_workspace->views_focus.next, new_view, workspace_focus_link);
+		view_focus(new_view, new_view->xdg_toplevel->base->surface);
 	}
 }
 
@@ -1777,7 +1852,8 @@ static void monitor_disable(struct monitor *monitor) {
 	if (server->active_monitor) {
 		struct workspace *end_workspace =
 				wl_container_of(monitor->workspaces.prev, end_workspace, link);
-		wl_list_init(&end_workspace->views);
+		wl_list_init(&end_workspace->views_order);
+		wl_list_init(&end_workspace->views_focus);
 
 		struct workspace *workspace;
 		wl_list_for_each(workspace, &monitor->workspaces, link) {
@@ -1791,8 +1867,10 @@ static void monitor_disable(struct monitor *monitor) {
 		struct view *view, *view_tmp;
 		wl_list_for_each_safe(view, view_tmp, &monitor->views, monitor_link) {
 			wl_list_insert(&server->active_monitor->views, &view->monitor_link);
-			wl_list_insert(
-					&server->active_monitor->current_workspace->views, &view->workspace_link);
+			wl_list_insert(&server->active_monitor->current_workspace->views_order,
+					&view->workspace_order_link);
+			wl_list_insert(server->active_monitor->current_workspace->views_focus.prev,
+					&view->workspace_focus_link);
 		}
 		wl_list_init(&monitor->views);
 
@@ -1846,59 +1924,6 @@ static void monitor_handle_destroy(struct wl_listener *listener, void *data) {
 	free(monitor);
 }
 
-static void view_focus(struct view *view, struct wlr_surface *surface) {
-	struct ptychite_server *server = view->server;
-	struct wlr_seat *seat = server->seat;
-	struct wlr_surface *prev_surface = seat->keyboard_state.focused_surface;
-	struct ptychite_config *config = server->compositor->config;
-
-	if (prev_surface == surface) {
-		return;
-	}
-	if (prev_surface) {
-		struct wlr_xdg_surface *prev_xdg_surface =
-				wlr_xdg_surface_try_from_wlr_surface(seat->keyboard_state.focused_surface);
-		assert(prev_xdg_surface && prev_xdg_surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL);
-		wlr_xdg_toplevel_set_activated(prev_xdg_surface->toplevel, false);
-
-		struct wlr_scene_tree *scene_tree = prev_xdg_surface->data;
-		struct element *element = scene_tree->node.data;
-		if (element) {
-			struct view *prev_view = element_get_view(element);
-			prev_view->focused = false;
-			wlr_scene_rect_set_color(prev_view->border.top, config->views.border.colors.inactive);
-			wlr_scene_rect_set_color(prev_view->border.right, config->views.border.colors.inactive);
-			wlr_scene_rect_set_color(
-					prev_view->border.bottom, config->views.border.colors.inactive);
-			wlr_scene_rect_set_color(prev_view->border.left, config->views.border.colors.inactive);
-			if (prev_view->title_bar &&
-					prev_view->title_bar->base.element.scene_tree->node.enabled) {
-				window_relay_draw_same_size(&prev_view->title_bar->base);
-			}
-		}
-	}
-
-	view->focused = true;
-	wlr_scene_node_raise_to_top(&view->element.scene_tree->node);
-	wl_list_remove(&view->link);
-	wl_list_insert(&server->views, &view->link);
-	wlr_xdg_toplevel_set_activated(view->xdg_toplevel, true);
-
-	wlr_scene_rect_set_color(view->border.top, config->views.border.colors.active);
-	wlr_scene_rect_set_color(view->border.right, config->views.border.colors.active);
-	wlr_scene_rect_set_color(view->border.bottom, config->views.border.colors.active);
-	wlr_scene_rect_set_color(view->border.left, config->views.border.colors.active);
-	if (view->title_bar && view->title_bar->base.element.scene_tree->node.enabled) {
-		window_relay_draw_same_size(&view->title_bar->base);
-	}
-
-	struct wlr_keyboard *keyboard = wlr_seat_get_keyboard(seat);
-	if (keyboard) {
-		wlr_seat_keyboard_notify_enter(seat, view->xdg_toplevel->base->surface, keyboard->keycodes,
-				keyboard->num_keycodes, &keyboard->modifiers);
-	}
-}
-
 static void view_begin_interactive(struct view *view, enum cursor_mode mode) {
 	struct ptychite_server *server = view->server;
 	struct wlr_surface *focused_surface = server->seat->pointer_state.focused_surface;
@@ -1935,23 +1960,22 @@ static void view_handle_map(struct wl_listener *listener, void *data) {
 	struct view *view = wl_container_of(listener, view, map);
 	struct ptychite_config *config = view->server->compositor->config;
 
-	wl_list_insert(&view->server->views, &view->link);
+	wl_list_insert(&view->server->views, &view->server_link);
 	if (view->server->active_monitor) {
 		view->monitor = view->server->active_monitor;
-
-		struct workspace *workspace = view->monitor->current_workspace;
-		struct workspace *end_workspace =
-				wl_container_of(view->monitor->workspaces.prev, end_workspace, link);
-		if (workspace == end_workspace && monitor_add_workspace(view->monitor) &&
-				view->monitor->panel && view->monitor->panel->base.scene_buffer->node.enabled) {
-			window_relay_draw_same_size(&view->monitor->panel->base);
-		}
+		view->workspace = view->monitor->current_workspace;
 
 		wl_list_insert(&view->monitor->views, &view->monitor_link);
-		if (!config->views.map_to_front) {
-			wl_list_insert(workspace->views.prev, &view->workspace_link);
-		} else {
-			wl_list_insert(&workspace->views, &view->workspace_link);
+		wl_list_insert(config->views.map_to_front ? &view->workspace->views_order
+												  : view->workspace->views_order.prev,
+				&view->workspace_order_link);
+		wl_list_insert(&view->workspace->views_focus, &view->workspace_focus_link);
+
+		struct workspace *end_workspace =
+				wl_container_of(view->monitor->workspaces.prev, end_workspace, link);
+		if (view->workspace == end_workspace && monitor_add_workspace(view->monitor) &&
+				view->monitor->panel && view->monitor->panel->base.scene_buffer->node.enabled) {
+			window_relay_draw_same_size(&view->monitor->panel->base);
 		}
 	}
 	view->set_title.notify = view_handle_set_title;
@@ -1990,15 +2014,22 @@ static void view_handle_unmap(struct wl_listener *listener, void *data) {
 		view->server->grabbed_view = NULL;
 	}
 
-	wl_list_remove(&view->workspace_link);
+	wl_list_remove(&view->workspace_order_link);
+	wl_list_remove(&view->workspace_focus_link);
 	wl_list_remove(&view->monitor_link);
-	wl_list_remove(&view->link);
+	wl_list_remove(&view->server_link);
 	wl_list_remove(&view->set_title.link);
 
 	wlr_scene_node_set_enabled(&view->element.scene_tree->node, false);
 
 	if (view->monitor) {
 		monitor_tile(view->monitor);
+		if (view->focused && !wl_list_empty(&view->monitor->current_workspace->views_order)) {
+			struct view *new_view =
+					wl_container_of(view->monitor->current_workspace->views_focus.next, new_view,
+							workspace_focus_link);
+			view_focus(new_view, new_view->xdg_toplevel->base->surface);
+		}
 	}
 }
 
@@ -2128,7 +2159,7 @@ static void title_bar_handle_pointer_button(
 		return;
 	}
 
-	view_focus(title_bar->view, NULL);
+	view_focus(title_bar->view, title_bar->view->xdg_toplevel->base->surface);
 	view_begin_interactive(title_bar->view, CURSOR_MOVE);
 }
 
@@ -2777,7 +2808,8 @@ static void server_handle_seat_request_set_selection(struct wl_listener *listene
 static struct view *server_get_top_view(struct ptychite_server *server) {
 	if (server->active_monitor) {
 		struct view *view;
-		wl_list_for_each(view, &server->active_monitor->current_workspace->views, workspace_link) {
+		wl_list_for_each(view, &server->active_monitor->current_workspace->views_focus,
+				workspace_focus_link) {
 			return view;
 		}
 
@@ -2785,7 +2817,7 @@ static struct view *server_get_top_view(struct ptychite_server *server) {
 	}
 
 	struct view *view;
-	wl_list_for_each(view, &server->views, link) {
+	wl_list_for_each(view, &server->views, server_link) {
 		return view;
 	}
 
@@ -3104,7 +3136,7 @@ void ptychite_server_configure_panels(struct ptychite_server *server) {
 
 void ptychite_server_configure_views(struct ptychite_server *server) {
 	struct view *view;
-	wl_list_for_each(view, &server->views, link) {
+	wl_list_for_each(view, &server->views, server_link) {
 		if (view->title_bar) {
 			wlr_scene_node_set_enabled(&view->title_bar->base.element.scene_tree->node,
 					server->compositor->config->views.title_bar.enabled);
