@@ -83,9 +83,15 @@
 				]
 			},
 			{
-				"pattern":"S-a",
+				"pattern":"S-w",
 				"action":[
-					"add_workspace"
+					"next_view"
+				]
+			},
+			{
+				"pattern":"Sh-S-W",
+				"action":[
+					"prev_view"
 				]
 			}
 		]

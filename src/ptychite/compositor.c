@@ -84,6 +84,16 @@ static void compositor_action_goto_previous_workspace(
 	ptychite_server_goto_previous_workspace(compositor->server);
 }
 
+static void compositor_action_focus_next_view(
+		struct ptychite_compositor *compositor, void *data) {
+	ptychite_server_focus_next_view(compositor->server);
+}
+
+static void compositor_action_focus_previous_view(
+		struct ptychite_compositor *compositor, void *data) {
+	ptychite_server_focus_previous_view(compositor->server);
+}
+
 static const struct {
 	char *name;
 	ptychite_action_func_t action_func;
@@ -102,6 +112,8 @@ static const struct {
 		{"next_workspace", compositor_action_goto_next_workspace, PTYCHITE_ACTION_FUNC_DATA_NONE},
 		{"prev_workspace", compositor_action_goto_previous_workspace,
 				PTYCHITE_ACTION_FUNC_DATA_NONE},
+		{"next_view", compositor_action_focus_next_view, PTYCHITE_ACTION_FUNC_DATA_NONE},
+		{"prev_view", compositor_action_focus_previous_view, PTYCHITE_ACTION_FUNC_DATA_NONE},
 };
 
 int ptychite_compositor_init(struct ptychite_compositor *compositor) {

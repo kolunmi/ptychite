@@ -2886,6 +2886,14 @@ static void server_tiling_change_master_factor(struct ptychite_server *server, d
 	monitor_tile(monitor);
 }
 
+static void server_focus_any(struct ptychite_server *server) {
+	struct monitor *monitor = server->active_monitor;
+	if (monitor && !wl_list_empty(&monitor->current_workspace->views_focus)) {
+		struct view *view = wl_container_of(monitor->current_workspace->views_focus.next, view, workspace_focus_link);
+		view_focus(view, view->xdg_toplevel->base->surface);
+	}
+}
+
 struct ptychite_server *ptychite_server_create(void) {
 	return calloc(1, sizeof(struct ptychite_server));
 }
@@ -3233,4 +3241,34 @@ void ptychite_server_goto_previous_workspace(struct ptychite_server *server) {
 	struct workspace *workspace = wl_container_of(list, workspace, link);
 
 	monitor_switch_workspace(monitor, workspace);
+}
+
+void ptychite_server_focus_next_view(struct ptychite_server *server) {
+	struct view *old_view = server_get_focused_view(server);
+	if (!old_view) {
+		server_focus_any(server);
+		return;
+	}
+	
+	struct wl_list *list = old_view->workspace_order_link.next == &old_view->workspace->views_order
+			? old_view->workspace_order_link.next->next
+			: old_view->workspace_order_link.next;
+	struct view *new_view = wl_container_of(list, new_view, workspace_order_link);
+
+	view_focus(new_view, new_view->xdg_toplevel->base->surface);
+}
+
+void ptychite_server_focus_previous_view(struct ptychite_server *server) {
+	struct view *old_view = server_get_focused_view(server);
+	if (!old_view) {
+		server_focus_any(server);
+		return;
+	}
+	
+	struct wl_list *list = old_view->workspace_order_link.prev == &old_view->workspace->views_order
+			? old_view->workspace_order_link.prev->prev
+			: old_view->workspace_order_link.prev;
+	struct view *new_view = wl_container_of(list, new_view, workspace_order_link);
+
+	view_focus(new_view, new_view->xdg_toplevel->base->surface);
 }

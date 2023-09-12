@@ -41,4 +41,8 @@ void ptychite_server_goto_next_workspace(struct ptychite_server *server);
 
 void ptychite_server_goto_previous_workspace(struct ptychite_server *server);
 
+void ptychite_server_focus_next_view(struct ptychite_server *server);
+
+void ptychite_server_focus_previous_view(struct ptychite_server *server);
+
 #endif
