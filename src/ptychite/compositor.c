@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <wayland-util.h>
 
 #include <wlr/util/log.h>
@@ -11,7 +12,6 @@
 #include "config.h"
 #include "macros.h"
 #include "server.h"
-#include "util.h"
 
 enum ptychite_action_func_data_mode {
 	PTYCHITE_ACTION_FUNC_DATA_NONE,
@@ -28,6 +28,15 @@ struct ptychite_action {
 	void *data;
 };
 
+static void spawn(char **args) {
+	if (!fork()) {
+		dup2(STDERR_FILENO, STDOUT_FILENO);
+		setsid();
+		execvp(args[0], args);
+		exit(EXIT_SUCCESS);
+	}
+}
+
 static void compositor_action_terminate(struct ptychite_compositor *compositor, void *data) {
 	ptychite_server_terminate(compositor->server);
 }
@@ -43,7 +52,7 @@ static void compositor_action_toggle_control(struct ptychite_compositor *composi
 static void compositor_action_spawn(struct ptychite_compositor *compositor, void *data) {
 	char **args = data;
 
-	util_spawn(args);
+	spawn(args);
 }
 
 static void compositor_action_shell(struct ptychite_compositor *compositor, void *data) {
@@ -51,7 +60,7 @@ static void compositor_action_shell(struct ptychite_compositor *compositor, void
 
 	char *args[] = {"/bin/sh", "-c", command, NULL};
 
-	util_spawn(args);
+	spawn(args);
 }
 
 static void compositor_action_inc_master(struct ptychite_compositor *compositor, void *data) {
@@ -84,8 +93,7 @@ static void compositor_action_goto_previous_workspace(
 	ptychite_server_goto_previous_workspace(compositor->server);
 }
 
-static void compositor_action_focus_next_view(
-		struct ptychite_compositor *compositor, void *data) {
+static void compositor_action_focus_next_view(struct ptychite_compositor *compositor, void *data) {
 	ptychite_server_focus_next_view(compositor->server);
 }
 

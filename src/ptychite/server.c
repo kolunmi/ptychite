@@ -50,7 +50,6 @@
 #include "macros.h"
 #include "ptychite-message-unstable-v1-protocol.h"
 #include "server.h"
-#include "util.h"
 
 enum cursor_mode {
 	CURSOR_PASSTHROUGH,

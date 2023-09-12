@@ -99,7 +99,6 @@ executable(
     'src/ptychite/server.c',
     'src/ptychite/config.c',
     'src/ptychite/json.c',
-    'src/ptychite/util.c',
   ],
   include_directories: [include_directories('.')],
   dependencies: [
