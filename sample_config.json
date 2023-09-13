@@ -71,13 +71,13 @@
 				]
 			},
 			{
-				"pattern":"S-f",
+				"pattern":"S-n",
 				"action":[
 					"next_workspace"
 				]
 			},
 			{
-				"pattern":"S-b",
+				"pattern":"S-p",
 				"action":[
 					"prev_workspace"
 				]

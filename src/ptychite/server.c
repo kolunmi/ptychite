@@ -3122,7 +3122,8 @@ static void server_action_swap_front(struct ptychite_server *server, void *data)
 		if (view->workspace_order_link.next == &view->workspace->views_order) {
 			return;
 		} else {
-			new_front = wl_container_of(view->workspace_order_link.next, new_front, workspace_order_link);
+			new_front = wl_container_of(
+					view->workspace_order_link.next, new_front, workspace_order_link);
 		}
 	} else {
 		new_front = view;
