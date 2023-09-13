@@ -41,20 +41,65 @@ ptychite should have a robust base-level functionality and be completely usable 
 * [librsvg](https://gitlab.gnome.org/GNOME/librsvg)
 
 ## Building
-```bash
-git clone https://git.sr.ht/~kolunmi/ptychite
-cd ptychite
+```sh
 meson setup build/
 ninja -C build/
 ```
 
 ## Configuration
-ptychite is configured in json; all data you send to and recieve from the compositor will be in this format. Upon startup ptychite looks for the file `~/.config/ptychite/ptychite.json` (see `sample_config.json`). This file will instruct ptychite to build a configuration with the given property nodes. 
+ptychite is configured in json; all data you send to and recieve from the compositor will be in this format. Upon startup ptychite looks for the file `~/.config/ptychite/ptychite.json` (see `sample_config.json`). This file will instruct ptychite to build a configuration with the given property nodes. Properties are expressed as paths delimited by `:` characters.
+
+This simple configuration will accept the default values for all properties except `keyboard:repeat:rate`, `keyboard:repeat:delay`, and `keyboard:xkb:options`, for which custom values are provided:
+```json
+{
+	"keyboard":{
+		"repeat":{
+			"rate":60,
+			"delay":250
+		},
+		"xkb":{
+			"options":"ctrl:swapcaps"
+		}
+	}
+}
+```
 
 ### ptymsg
-ptymsg is a client program used to configure and query information from ptychite at runtime. The currently supported commands are:
-* `ptymsg set (--overwrite) <property path> <json object>` set the specified property; for example, `ptymsg set monitors:wallpaper:filepath '"background.png"'`
-* `ptymsg get (--compact) <property path>`: get the specified property as a json object
-* `ptymsg dump-views (--compact) <output name>`: dump information about the current views on the given output or `all` for every view regardless of output
+ptymsg is a client program used to configure and query information from ptychite at runtime. It utilizes the ptychite-message protocol to communicate with the compositor.
 
-You can dump the current config in its entirety to stdout using `ptymsg get :`
+#### Setting Properties
+The `set` command takes two arguments: a property path and json data.
+```sh
+ptymsg set monitors:wallpaper:filepath '"background.png"'
+```
+It also takes an optional flag, `--overwrite`, to overwrite lists instead of appending to them.
+```sh
+# delete all chords before adding
+ptymsg set --overwrite keyboard:chords '[{"pattern":"S-x i","action":["spawn","firefox"]}]'
+```
+Note that multiple properties can be set at once by passing an incomplete property path.
+```sh
+ptymsg set tiling '{"mode":"traditional","gaps":20}'
+# is equivalent to
+ptymsg set tiling:mode '"traditional"' && ptymsg set tiling:gaps 20
+```
+
+#### Getting Properties
+The `get` command outputs the corresponding json data with a property path. By default, the json is pretty-printed; whitespace will be removed if the `--compact` option is passed.
+```sh
+ptymsg get --compact panel
+```
+To output the entire configuration:
+```sh
+ptymsg get :
+```
+
+#### View Data
+The `dump-views` command will dump information about the current views on the given output or `all` for every view regardless of output.
+```sh
+ptymsg dump-views eDP-1
+ptymsg dump-views --compact all
+```
+
+## Contributing
+Thank you! Patches should be sent to [~kolunmi/ptychite@lists.sr.ht](https://lists.sr.ht/~kolunmi/ptychite).
