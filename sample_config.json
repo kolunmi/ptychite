@@ -93,6 +93,12 @@
 				"action":[
 					"prev_view"
 				]
+			},
+			{
+				"pattern":"S-s",
+				"action":[
+					"swap_front"
+				]
 			}
 		]
 	},

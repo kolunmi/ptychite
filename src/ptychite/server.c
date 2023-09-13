@@ -2894,6 +2894,20 @@ static struct view *server_get_top_view(struct ptychite_server *server) {
 	return NULL;
 }
 
+static struct view *server_get_front_view(struct ptychite_server *server) {
+	if (!server->active_monitor) {
+		return NULL;
+	}
+
+	struct view *view;
+	wl_list_for_each(
+			view, &server->active_monitor->current_workspace->views_order, workspace_order_link) {
+		return view;
+	}
+
+	return NULL;
+}
+
 static struct view *server_get_focused_view(struct ptychite_server *server) {
 	struct wlr_surface *surface = server->seat->keyboard_state.focused_surface;
 	if (!surface) {
@@ -3094,6 +3108,31 @@ static void server_action_focus_previous_view(struct ptychite_server *server, vo
 	view_focus(new_view, new_view->xdg_toplevel->base->surface);
 }
 
+static void server_action_swap_front(struct ptychite_server *server, void *data) {
+	struct view *view = server_get_focused_view(server);
+	if (!view) {
+		return;
+	}
+
+	struct view *front = server_get_front_view(server);
+	assert(front);
+
+	struct view *new_front;
+	if (view == front) {
+		if (view->workspace_order_link.next == &view->workspace->views_order) {
+			return;
+		} else {
+			new_front = wl_container_of(view->workspace_order_link.next, new_front, workspace_order_link);
+		}
+	} else {
+		new_front = view;
+	}
+
+	wl_list_remove(&new_front->workspace_order_link);
+	wl_list_insert(&new_front->workspace->views_order, &new_front->workspace_order_link);
+	monitor_tile(new_front->monitor);
+}
+
 static const struct {
 	char *name;
 	action_func_t action_func;
@@ -3113,6 +3152,7 @@ static const struct {
 		{"prev_workspace", server_action_goto_previous_workspace, ACTION_FUNC_DATA_NONE},
 		{"next_view", server_action_focus_next_view, ACTION_FUNC_DATA_NONE},
 		{"prev_view", server_action_focus_previous_view, ACTION_FUNC_DATA_NONE},
+		{"swap_front", server_action_swap_front, ACTION_FUNC_DATA_NONE},
 };
 
 struct ptychite_server *ptychite_server_create(void) {
