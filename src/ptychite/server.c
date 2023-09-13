@@ -2169,6 +2169,11 @@ static void title_bar_draw(
 			.height = font_height / 2,
 	};
 
+	cairo_rectangle(cairo, title_bar->regions.close.box.x, title_bar->regions.close.box.y,
+			title_bar->regions.close.box.width, title_bar->regions.close.box.height);
+	cairo_set_source_rgba(cairo, background[0], background[1], background[2], background[3]);
+	cairo_fill(cairo);
+
 	if (title_bar->regions.close.entered) {
 		cairo_arc(cairo, close_draw_box.x + close_draw_box.width / 2.0,
 				close_draw_box.y + close_draw_box.height / 2.0, close_draw_box.width, 0, PI * 2);
