@@ -1511,6 +1511,7 @@ static void keyboard_handle_key(struct wl_listener *listener, void *data) {
 				continue;
 			}
 
+			bool match = false;
 			struct ptychite_chord_binding *chord_binding;
 			wl_array_for_each(chord_binding, &server->compositor->config->keyboard.chords) {
 				if (!chord_binding->active) {
@@ -1524,11 +1525,11 @@ static void keyboard_handle_key(struct wl_listener *listener, void *data) {
 				}
 
 				bool pass = false;
-				size_t i;
-				for (i = 0; i < progress; i++) {
-					struct ptychite_key *key_binding = &chord_binding->chord.keys[i];
+				size_t j;
+				for (j = 0; j < progress; j++) {
+					struct ptychite_key *key_binding = &chord_binding->chord.keys[j];
 					struct ptychite_key *key_current =
-							&((struct ptychite_key *)server->keys.data)[i];
+							&((struct ptychite_key *)server->keys.data)[j];
 					if (key_binding->sym != key_current->sym ||
 							key_binding->modifiers != key_current->modifiers) {
 						pass = true;
@@ -1544,6 +1545,7 @@ static void keyboard_handle_key(struct wl_listener *listener, void *data) {
 					continue;
 				}
 
+				handled = match = true;
 				if (length == progress + 1) {
 					ptychite_server_execute_action(server, chord_binding->action);
 					server->keys.size = 0;
@@ -1552,24 +1554,23 @@ static void keyboard_handle_key(struct wl_listener *listener, void *data) {
 							wl_array_add(&server->keys, sizeof(struct ptychite_key));
 					if (!append) {
 						server->keys.size = 0;
-						handled = true;
-						goto done_evaluating;
+						break;
 					}
 					*append = (struct ptychite_key){.sym = syms[i], .modifiers = modifiers};
 				}
 
-				handled = true;
-				goto done_evaluating;
+				break;
 			}
 
-			if (server->keys.size) {
-				server->keys.size = 0;
-				handled = true;
-			} else {
-				handled = false;
+			if (!match) {
+				if (server->keys.size) {
+					server->keys.size = 0;
+					handled = true;
+				} else {
+					handled = false;
+				}
 			}
 
-done_evaluating:
 			if (!handled && server->session &&
 					modifiers == (WLR_MODIFIER_CTRL | WLR_MODIFIER_ALT)) {
 				unsigned int vt = 0;
