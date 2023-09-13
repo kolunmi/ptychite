@@ -1,5 +1,5 @@
 <div align="center">
-<img src="https://git.sr.ht/~kolunmi/ptychite/blob/main/ptychite.png" width=50% height=50%>
+<img src="https://git.sr.ht/~kolunmi/ptychite/blob/main/ptychite.png" width=30% height=30%>
 </div>
 
 [![builds.sr.ht status](https://builds.sr.ht/~kolunmi/ptychite/.svg)](https://builds.sr.ht/~kolunmi/ptychite/?)
@@ -41,6 +41,7 @@ ptychite should have a robust base-level functionality and be completely usable 
 * [librsvg](https://gitlab.gnome.org/GNOME/librsvg)
 
 ## Building
+Ensure all dependencies are installed, then run:
 ```sh
 meson setup build/
 ninja -C build/
@@ -102,4 +103,4 @@ ptymsg dump-views --compact all
 ```
 
 ## Contributing
-Thank you! Patches should be sent to [~kolunmi/ptychite@lists.sr.ht](https://lists.sr.ht/~kolunmi/ptychite).
+Thank you for your interest in my project!! If you would like to contribute, please send patches to [~kolunmi/ptychite@lists.sr.ht](https://lists.sr.ht/~kolunmi/ptychite).
