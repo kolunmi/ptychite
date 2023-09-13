@@ -15,10 +15,10 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	int rv = ptychite_compositor_run(&compositor);
+	int return_status = ptychite_compositor_run(&compositor);
 	ptychite_compositor_deinit(&compositor);
 
-	if (rv) {
+	if (return_status) {
 		return 1;
 	}
 	return 0;

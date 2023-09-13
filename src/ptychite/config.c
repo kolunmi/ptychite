@@ -1162,9 +1162,9 @@ static int config_set_property_inner(struct ptychite_config *config, const char 
 
 	struct property_entry_reference *front = entry_refs.data;
 	if (entry_refs_l == 1 && front->path_l == path_l) {
-		int rv = front->entry->set_func(config, value, mode, error);
+		int return_status = front->entry->set_func(config, value, mode, error);
 		wl_array_release(&entry_refs);
-		return rv;
+		return return_status;
 	}
 
 	if (!json_object_is_type(value, json_type_object)) {
@@ -1457,9 +1457,9 @@ int ptychite_config_set_property_from_string(struct ptychite_config *config, con
 		return -1;
 	}
 
-	int rv = config_set_property_inner(config, path, value, mode, error);
+	int return_status = config_set_property_inner(config, path, value, mode, error);
 	json_object_put(value);
-	return rv;
+	return return_status;
 }
 
 int ptychite_config_set_property_from_file(struct ptychite_config *config, const char *path,
@@ -1470,9 +1470,9 @@ int ptychite_config_set_property_from_file(struct ptychite_config *config, const
 		return -1;
 	}
 
-	int rv = config_set_property_inner(config, path, value, mode, error);
+	int return_status = config_set_property_inner(config, path, value, mode, error);
 	json_object_put(value);
-	return rv;
+	return return_status;
 }
 
 char *ptychite_config_get_property(struct ptychite_config *config, const char *path,

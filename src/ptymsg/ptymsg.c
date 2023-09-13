@@ -15,7 +15,7 @@ struct ptymsg_state {
 	struct zptychite_message_v1 *ptychite_message;
 	struct wl_list monitors;
 	struct wl_list callback_datas;
-	int rv;
+	int exit_code;
 };
 
 struct monitor {
@@ -87,7 +87,7 @@ static void ptychite_message_callback_handle_failure(
 		fprintf(stderr, "%s", error);
 	}
 
-	callback_data->state->rv = 1;
+	callback_data->state->exit_code = 1;
 	wl_list_remove(&callback_data->link);
 	free(callback_data);
 }
@@ -128,7 +128,7 @@ int main(int argc, char **argv) {
 	struct ptymsg_state state = {0};
 	wl_list_init(&state.monitors);
 	wl_list_init(&state.callback_datas);
-	state.rv = 0;
+	state.exit_code = 0;
 
 	if (!(state.display = wl_display_connect(NULL))) {
 		fprintf(stderr, "could not connect to display\n");
@@ -151,7 +151,7 @@ int main(int argc, char **argv) {
 		struct callback_data *callback_data = calloc(1, sizeof(struct callback_data));
 		if (!callback_data) {
 			fprintf(stderr, "a memory error occurred\n");
-			state.rv = 1;
+			state.exit_code = 1;
 			goto done;
 		}
 		wl_list_insert(&state.callback_datas, &callback_data->link);
@@ -166,7 +166,7 @@ int main(int argc, char **argv) {
 			}
 			if (i + 2 >= argc) {
 				fprintf(stderr, "command set requires two arguments\n");
-				state.rv = 1;
+				state.exit_code = 1;
 				goto done;
 			}
 			char *path = argv[++i];
@@ -184,7 +184,7 @@ int main(int argc, char **argv) {
 			}
 			if (i + 1 >= argc) {
 				fprintf(stderr, "command get requires an argument\n");
-				state.rv = 1;
+				state.exit_code = 1;
 				goto done;
 			}
 			char *path = argv[++i];
@@ -200,7 +200,7 @@ int main(int argc, char **argv) {
 			}
 			if (i + 1 >= argc) {
 				fprintf(stderr, "command dump-views requires an argument\n");
-				state.rv = 1;
+				state.exit_code = 1;
 				goto done;
 			}
 			char *output_name = argv[++i];
@@ -216,7 +216,7 @@ int main(int argc, char **argv) {
 				if (!output) {
 					fprintf(stderr,
 							"command dump-views did not recieve an available output name\n");
-					state.rv = 1;
+					state.exit_code = 1;
 					goto done;
 				}
 			}
@@ -229,7 +229,7 @@ int main(int argc, char **argv) {
 					callback, &ptychite_message_callback_listener, callback_data);
 		} else {
 			fprintf(stderr, "unrecognized command '%s'\n", argv[i]);
-			state.rv = 1;
+			state.exit_code = 1;
 			goto done;
 		}
 	}
@@ -254,5 +254,5 @@ done:
 	wl_registry_destroy(registry);
 	wl_display_disconnect(state.display);
 
-	return state.rv;
+	return state.exit_code;
 }
