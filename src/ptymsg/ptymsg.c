@@ -31,20 +31,19 @@ struct callback_data {
 	const char *error_prefix;
 };
 
-static void output_handle_description(
-		void *data, struct wl_output *wl_output, const char *description) {
+static void output_handle_description(void *data, struct wl_output *wl_output, const char *description) {
 }
 
 static void output_handle_done(void *data, struct wl_output *wl_output) {
 }
 
 static void output_handle_geometry(void *data, struct wl_output *wl_output, int32_t x, int32_t y,
-		int32_t physical_width, int32_t physical_height, int32_t subpixel, const char *make,
-		const char *model, int32_t transform) {
+		int32_t physical_width, int32_t physical_height, int32_t subpixel, const char *make, const char *model,
+		int32_t transform) {
 }
 
-static void output_handle_mode(void *data, struct wl_output *wl_output, uint32_t flags,
-		int32_t width, int32_t height, int32_t refresh) {
+static void output_handle_mode(
+		void *data, struct wl_output *wl_output, uint32_t flags, int32_t width, int32_t height, int32_t refresh) {
 }
 
 static void output_handle_name(void *data, struct wl_output *wl_output, const char *name) {
@@ -97,13 +96,12 @@ static const struct zptychite_message_callback_v1_listener ptychite_message_call
 		.failure = ptychite_message_callback_handle_failure,
 };
 
-static void registry_handle_global(void *data, struct wl_registry *registry, uint32_t name,
-		const char *interface, uint32_t version) {
+static void registry_handle_global(
+		void *data, struct wl_registry *registry, uint32_t name, const char *interface, uint32_t version) {
 	struct ptymsg_state *state = data;
 
 	if (!strcmp(interface, zptychite_message_v1_interface.name)) {
-		state->ptychite_message =
-				wl_registry_bind(registry, name, &zptychite_message_v1_interface, 1);
+		state->ptychite_message = wl_registry_bind(registry, name, &zptychite_message_v1_interface, 1);
 	} else if (!strcmp(interface, wl_output_interface.name)) {
 		struct monitor *monitor = calloc(1, sizeof(struct monitor));
 		if (!monitor) {
@@ -158,8 +156,7 @@ int main(int argc, char **argv) {
 		callback_data->state = &state;
 
 		if (!strcmp(argv[i], "set")) {
-			enum zptychite_message_v1_property_set_mode mode =
-					ZPTYCHITE_MESSAGE_V1_PROPERTY_SET_MODE_APPEND;
+			enum zptychite_message_v1_property_set_mode mode = ZPTYCHITE_MESSAGE_V1_PROPERTY_SET_MODE_APPEND;
 			if (i + 1 < argc && !strcmp(argv[i + 1], "--overwrite")) {
 				mode = ZPTYCHITE_MESSAGE_V1_PROPERTY_SET_MODE_OVERWRITE;
 				i++;
@@ -171,13 +168,11 @@ int main(int argc, char **argv) {
 			}
 			char *path = argv[++i];
 			char *string = argv[++i];
-			callback =
-					zptychite_message_v1_set_property(state.ptychite_message, path, string, mode);
+			callback = zptychite_message_v1_set_property(state.ptychite_message, path, string, mode);
 			callback_data->error_prefix = "failed to set property";
 
 		} else if (!strcmp(argv[i], "get")) {
-			enum zptychite_message_v1_json_get_mode mode =
-					ZPTYCHITE_MESSAGE_V1_JSON_GET_MODE_PRETTY;
+			enum zptychite_message_v1_json_get_mode mode = ZPTYCHITE_MESSAGE_V1_JSON_GET_MODE_PRETTY;
 			if (i + 1 < argc && !strcmp(argv[i + 1], "--compact")) {
 				mode = ZPTYCHITE_MESSAGE_V1_JSON_GET_MODE_COMPACT;
 				i++;
@@ -192,8 +187,7 @@ int main(int argc, char **argv) {
 			callback_data->error_prefix = "failed to get property";
 
 		} else if (!strcmp(argv[i], "dump-views")) {
-			enum zptychite_message_v1_json_get_mode mode =
-					ZPTYCHITE_MESSAGE_V1_JSON_GET_MODE_PRETTY;
+			enum zptychite_message_v1_json_get_mode mode = ZPTYCHITE_MESSAGE_V1_JSON_GET_MODE_PRETTY;
 			if (i + 1 < argc && !strcmp(argv[i + 1], "--compact")) {
 				mode = ZPTYCHITE_MESSAGE_V1_JSON_GET_MODE_COMPACT;
 				i++;
@@ -214,8 +208,7 @@ int main(int argc, char **argv) {
 					}
 				}
 				if (!output) {
-					fprintf(stderr,
-							"command dump-views did not recieve an available output name\n");
+					fprintf(stderr, "command dump-views did not recieve an available output name\n");
 					state.exit_code = 1;
 					goto done;
 				}
@@ -225,8 +218,7 @@ int main(int argc, char **argv) {
 		}
 
 		if (callback) {
-			zptychite_message_callback_v1_add_listener(
-					callback, &ptychite_message_callback_listener, callback_data);
+			zptychite_message_callback_v1_add_listener(callback, &ptychite_message_callback_listener, callback_data);
 		} else {
 			fprintf(stderr, "unrecognized command '%s'\n", argv[i]);
 			state.exit_code = 1;

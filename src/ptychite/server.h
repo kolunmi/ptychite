@@ -7,8 +7,7 @@ struct ptychite_action;
 
 struct ptychite_server *ptychite_server_create(void);
 
-int ptychite_server_init_and_run(
-		struct ptychite_server *server, struct ptychite_compositor *compositor);
+int ptychite_server_init_and_run(struct ptychite_server *server, struct ptychite_compositor *compositor);
 
 void ptychite_server_configure_keyboards(struct ptychite_server *server);
 

@@ -121,19 +121,18 @@ void ptychite_config_deinit(struct ptychite_config *config);
 struct ptychite_chord_binding *ptychite_config_add_chord_binding(struct ptychite_config *config);
 
 struct ptychite_chord_binding *ptychite_config_scan_into_chord_binding(
-		struct ptychite_config *config, const char *pattern, const char **args, int args_l,
-		char **error);
+		struct ptychite_config *config, const char *pattern, const char **args, int args_l, char **error);
 
 int ptychite_config_parse_config(struct ptychite_config *config, char **error);
 
-int ptychite_config_set_property_from_string(struct ptychite_config *config, const char *path,
-		const char *string, enum ptychite_property_set_mode mode, char **error);
+int ptychite_config_set_property_from_string(struct ptychite_config *config, const char *path, const char *string,
+		enum ptychite_property_set_mode mode, char **error);
 
-int ptychite_config_set_property_from_file(struct ptychite_config *config, const char *path,
-		const char *filepath, enum ptychite_property_set_mode mode, char **error);
+int ptychite_config_set_property_from_file(struct ptychite_config *config, const char *path, const char *filepath,
+		enum ptychite_property_set_mode mode, char **error);
 
-char *ptychite_config_get_property(struct ptychite_config *config, const char *path,
-		enum ptychite_json_get_mode mode, char **error);
+char *ptychite_config_get_property(
+		struct ptychite_config *config, const char *path, enum ptychite_json_get_mode mode, char **error);
 
 int ptychite_chord_parse_pattern(struct ptychite_chord *chord, const char *pattern, char **error);
 

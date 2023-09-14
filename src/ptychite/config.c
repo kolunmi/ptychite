@@ -19,8 +19,8 @@
 	for (iter = json_object_array_get_idx(arr, (i = 0)); i < json_object_array_length(arr); \
 			iter = json_object_array_get_idx(arr, ++i))
 
-typedef int (*ptychite_property_set_func_t)(struct ptychite_config *config,
-		struct json_object *value, enum ptychite_property_set_mode mode, char **error);
+typedef int (*ptychite_property_set_func_t)(
+		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error);
 
 typedef struct json_object *(*ptychite_property_get_func_t)(struct ptychite_config *config);
 
@@ -109,17 +109,16 @@ static int arrcolor_parse_from_string(float color[4], const char *string) {
 
 static json_object *color_convert_to_json(pixman_color_t *color) {
 	char buf[10];
-	snprintf(buf, sizeof(buf), "#%02x%02x%02x%02x", (uint8_t)color->red, (uint8_t)color->green,
-			(uint8_t)color->blue, (uint8_t)color->alpha);
+	snprintf(buf, sizeof(buf), "#%02x%02x%02x%02x", (uint8_t)color->red, (uint8_t)color->green, (uint8_t)color->blue,
+			(uint8_t)color->alpha);
 
 	return json_object_new_string(buf);
 }
 
 static json_object *arrcolor_convert_to_json(float color[4]) {
 	char buf[10];
-	snprintf(buf, sizeof(buf), "#%02x%02x%02x%02x", (uint8_t)(color[0] * 255.0f),
-			(uint8_t)(color[1] * 255.0f), (uint8_t)(color[2] * 255.0f),
-			(uint8_t)(color[3] * 255.0f));
+	snprintf(buf, sizeof(buf), "#%02x%02x%02x%02x", (uint8_t)(color[0] * 255.0f), (uint8_t)(color[1] * 255.0f),
+			(uint8_t)(color[2] * 255.0f), (uint8_t)(color[3] * 255.0f));
 
 	return json_object_new_string(buf);
 }
@@ -204,8 +203,8 @@ err_parse_font:
 	return -1;
 }
 
-static int config_set_keyboard_repeat_rate(struct ptychite_config *config,
-		struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
+static int config_set_keyboard_repeat_rate(
+		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
 	if (!json_object_is_type(value, json_type_int)) {
 		*error = "keyboard repeat rate must be an integer";
 		return -1;
@@ -225,8 +224,8 @@ static struct json_object *config_get_keyboard_repeat_rate(struct ptychite_confi
 	return json_object_new_int(config->keyboard.repeat.rate);
 }
 
-static int config_set_keyboard_repeat_delay(struct ptychite_config *config,
-		struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
+static int config_set_keyboard_repeat_delay(
+		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
 	if (!json_object_is_type(value, json_type_int)) {
 		*error = "keyboard repeat delay must be an integer";
 		return -1;
@@ -246,8 +245,8 @@ static struct json_object *config_get_keyboard_repeat_delay(struct ptychite_conf
 	return json_object_new_int(config->keyboard.repeat.delay);
 }
 
-static int config_set_keyboard_xkb_options(struct ptychite_config *config,
-		struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
+static int config_set_keyboard_xkb_options(
+		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
 	if (!json_object_is_type(value, json_type_string)) {
 		*error = "keyboard xkb options must be a string";
 		return -1;
@@ -274,8 +273,8 @@ static struct json_object *config_get_keyboard_xkb_options(struct ptychite_confi
 	return json_object_new_string(config->keyboard.xkb.options ? config->keyboard.xkb.options : "");
 }
 
-static int config_set_keyboard_chords(struct ptychite_config *config, struct json_object *value,
-		enum ptychite_property_set_mode mode, char **error) {
+static int config_set_keyboard_chords(
+		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
 	if (mode == PTYCHITE_PROPERTY_SET_OVERWRITE) {
 		ptychite_config_wipe_chord_bindings(config);
 	}
@@ -297,8 +296,7 @@ static int config_set_keyboard_chords(struct ptychite_config *config, struct jso
 			return -1;
 		}
 
-		struct json_object *pattern =
-				json_object_get_and_ensure_type(binding, "pattern", json_type_string);
+		struct json_object *pattern = json_object_get_and_ensure_type(binding, "pattern", json_type_string);
 		if (!pattern) {
 			*error = "each keyboard chord binding object must have a member \"pattern\" of type "
 					 "string";
@@ -306,8 +304,7 @@ static int config_set_keyboard_chords(struct ptychite_config *config, struct jso
 		}
 		const char *pattern_string = json_object_get_string(pattern);
 
-		struct json_object *action =
-				json_object_get_and_ensure_type(binding, "action", json_type_array);
+		struct json_object *action = json_object_get_and_ensure_type(binding, "action", json_type_array);
 		if (!action) {
 			*error = "each keyboard chord binding object must have a member \"action\" of type "
 					 "array";
@@ -335,8 +332,8 @@ static int config_set_keyboard_chords(struct ptychite_config *config, struct jso
 			args[j] = json_object_get_string(arg);
 		}
 
-		struct ptychite_chord_binding *chord_binding = ptychite_config_scan_into_chord_binding(
-				config, pattern_string, args, args_l, error);
+		struct ptychite_chord_binding *chord_binding =
+				ptychite_config_scan_into_chord_binding(config, pattern_string, args, args_l, error);
 		free(args);
 		if (!chord_binding) {
 			return -1;
@@ -429,8 +426,8 @@ static struct json_object *config_get_keyboard_chords(struct ptychite_config *co
 	return array;
 }
 
-static int config_set_panel_enabled(struct ptychite_config *config, struct json_object *value,
-		enum ptychite_property_set_mode mode, char **error) {
+static int config_set_panel_enabled(
+		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
 	if (!json_object_is_type(value, json_type_boolean)) {
 		*error = "panel switch must be a boolean";
 		return -1;
@@ -450,8 +447,8 @@ static struct json_object *config_get_panel_enabled(struct ptychite_config *conf
 	return json_object_new_boolean(config->panel.enabled);
 }
 
-static int config_set_panel_font(struct ptychite_config *config, struct json_object *value,
-		enum ptychite_property_set_mode mode, char **error) {
+static int config_set_panel_font(
+		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
 	if (!json_object_is_type(value, json_type_string)) {
 		*error = "panel font must be a string";
 		return -1;
@@ -473,8 +470,8 @@ static struct json_object *config_get_panel_font(struct ptychite_config *config)
 	return json_object_new_string(config->panel.font.string);
 }
 
-static int config_set_panel_colors_foreground(struct ptychite_config *config,
-		struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
+static int config_set_panel_colors_foreground(
+		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
 	if (!json_object_is_type(value, json_type_string)) {
 		*error = "panel color must be a string";
 		return -1;
@@ -497,8 +494,8 @@ static struct json_object *config_get_panel_colors_foreground(struct ptychite_co
 	return arrcolor_convert_to_json(config->panel.colors.foreground);
 }
 
-static int config_set_panel_colors_background(struct ptychite_config *config,
-		struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
+static int config_set_panel_colors_background(
+		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
 	if (!json_object_is_type(value, json_type_string)) {
 		*error = "panel color must be a string";
 		return -1;
@@ -521,8 +518,8 @@ static struct json_object *config_get_panel_colors_background(struct ptychite_co
 	return arrcolor_convert_to_json(config->panel.colors.background);
 }
 
-static int config_set_panel_colors_accent(struct ptychite_config *config, struct json_object *value,
-		enum ptychite_property_set_mode mode, char **error) {
+static int config_set_panel_colors_accent(
+		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
 	if (!json_object_is_type(value, json_type_string)) {
 		*error = "panel color must be a string";
 		return -1;
@@ -545,8 +542,8 @@ static struct json_object *config_get_panel_colors_accent(struct ptychite_config
 	return arrcolor_convert_to_json(config->panel.colors.accent);
 }
 
-static int config_set_panel_colors_gray1(struct ptychite_config *config, struct json_object *value,
-		enum ptychite_property_set_mode mode, char **error) {
+static int config_set_panel_colors_gray1(
+		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
 	if (!json_object_is_type(value, json_type_string)) {
 		*error = "panel color must be a string";
 		return -1;
@@ -569,8 +566,8 @@ static struct json_object *config_get_panel_colors_gray1(struct ptychite_config 
 	return arrcolor_convert_to_json(config->panel.colors.gray1);
 }
 
-static int config_set_panel_colors_gray2(struct ptychite_config *config, struct json_object *value,
-		enum ptychite_property_set_mode mode, char **error) {
+static int config_set_panel_colors_gray2(
+		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
 	if (!json_object_is_type(value, json_type_string)) {
 		*error = "panel color must be a string";
 		return -1;
@@ -593,8 +590,8 @@ static struct json_object *config_get_panel_colors_gray2(struct ptychite_config 
 	return arrcolor_convert_to_json(config->panel.colors.gray2);
 }
 
-static int config_set_panel_colors_border(struct ptychite_config *config, struct json_object *value,
-		enum ptychite_property_set_mode mode, char **error) {
+static int config_set_panel_colors_border(
+		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
 	if (!json_object_is_type(value, json_type_string)) {
 		*error = "panel color must be a string";
 		return -1;
@@ -617,8 +614,8 @@ static struct json_object *config_get_panel_colors_border(struct ptychite_config
 	return arrcolor_convert_to_json(config->panel.colors.border);
 }
 
-static int config_set_panel_colors_seperator(struct ptychite_config *config,
-		struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
+static int config_set_panel_colors_seperator(
+		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
 	if (!json_object_is_type(value, json_type_string)) {
 		*error = "panel color must be a string";
 		return -1;
@@ -641,8 +638,8 @@ static struct json_object *config_get_panel_colors_seperator(struct ptychite_con
 	return arrcolor_convert_to_json(config->panel.colors.seperator);
 }
 
-static int config_set_panel_colors_chord(struct ptychite_config *config, struct json_object *value,
-		enum ptychite_property_set_mode mode, char **error) {
+static int config_set_panel_colors_chord(
+		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
 	if (!json_object_is_type(value, json_type_string)) {
 		*error = "panel color must be a string";
 		return -1;
@@ -665,8 +662,8 @@ static struct json_object *config_get_panel_colors_chord(struct ptychite_config 
 	return arrcolor_convert_to_json(config->panel.colors.chord);
 }
 
-static int config_set_views_map_to_front(struct ptychite_config *config, struct json_object *value,
-		enum ptychite_property_set_mode mode, char **error) {
+static int config_set_views_map_to_front(
+		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
 	if (!json_object_is_type(value, json_type_boolean)) {
 		*error = "property map_to_front must be a boolean";
 		return -1;
@@ -682,8 +679,8 @@ static struct json_object *config_get_views_map_to_front(struct ptychite_config 
 	return json_object_new_boolean(config->views.map_to_front);
 }
 
-static int config_set_views_title_bar_enabled(struct ptychite_config *config,
-		struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
+static int config_set_views_title_bar_enabled(
+		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
 	if (!json_object_is_type(value, json_type_boolean)) {
 		*error = "title bar switch must be a boolean";
 		return -1;
@@ -703,8 +700,8 @@ static struct json_object *config_get_views_title_bar_enabled(struct ptychite_co
 	return json_object_new_boolean(config->views.title_bar.enabled);
 }
 
-static int config_set_views_title_bar_colors_close(struct ptychite_config *config,
-		struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
+static int config_set_views_title_bar_colors_close(
+		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
 	if (!json_object_is_type(value, json_type_string)) {
 		*error = "title bar color must be a string";
 		return -1;
@@ -727,8 +724,8 @@ static struct json_object *config_get_views_title_bar_colors_close(struct ptychi
 	return arrcolor_convert_to_json(config->views.title_bar.colors.close);
 }
 
-static int config_set_views_border_thickness(struct ptychite_config *config,
-		struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
+static int config_set_views_border_thickness(
+		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
 	if (!json_object_is_type(value, json_type_int)) {
 		*error = "view border thickness must be an integer";
 		return -1;
@@ -756,8 +753,8 @@ static struct json_object *config_get_views_border_thickness(struct ptychite_con
 	return json_object_new_int(config->views.border.thickness);
 }
 
-static int config_set_views_border_colors_active(struct ptychite_config *config,
-		struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
+static int config_set_views_border_colors_active(
+		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
 	if (!json_object_is_type(value, json_type_string)) {
 		*error = "view border color must be a string";
 		return -1;
@@ -776,8 +773,8 @@ static struct json_object *config_get_views_border_colors_active(struct ptychite
 	return arrcolor_convert_to_json(config->views.border.colors.active);
 }
 
-static int config_set_views_border_colors_inactive(struct ptychite_config *config,
-		struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
+static int config_set_views_border_colors_inactive(
+		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
 	if (!json_object_is_type(value, json_type_string)) {
 		*error = "view border color must be a string";
 		return -1;
@@ -796,8 +793,8 @@ static struct json_object *config_get_views_border_colors_inactive(struct ptychi
 	return arrcolor_convert_to_json(config->views.border.colors.inactive);
 }
 
-static int config_set_monitors_default_scale(struct ptychite_config *config,
-		struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
+static int config_set_monitors_default_scale(
+		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
 	if (!json_object_is_type(value, json_type_double)) {
 		*error = "monitor scale must be a double";
 		return -1;
@@ -818,8 +815,8 @@ static struct json_object *config_get_monitors_default_scale(struct ptychite_con
 	return json_object_new_double(config->monitors.default_scale);
 }
 
-static int config_set_monitors_wallpaper_filepath(struct ptychite_config *config,
-		struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
+static int config_set_monitors_wallpaper_filepath(
+		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
 	if (!json_object_is_type(value, json_type_string)) {
 		*error = "wallpaper path must be a string";
 		return -1;
@@ -880,12 +877,11 @@ static int config_set_monitors_wallpaper_filepath(struct ptychite_config *config
 }
 
 static struct json_object *config_get_monitors_wallpaper_filepath(struct ptychite_config *config) {
-	return json_object_new_string(
-			config->monitors.wallpaper.path ? config->monitors.wallpaper.path : "");
+	return json_object_new_string(config->monitors.wallpaper.path ? config->monitors.wallpaper.path : "");
 }
 
-static int config_set_monitors_wallpaper_mode(struct ptychite_config *config,
-		struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
+static int config_set_monitors_wallpaper_mode(
+		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
 	if (!json_object_is_type(value, json_type_string)) {
 		*error = "wallpaper mode must be a string";
 		return -1;
@@ -927,8 +923,8 @@ static struct json_object *config_get_monitors_wallpaper_mode(struct ptychite_co
 	return json_object_new_string(string);
 }
 
-static int config_set_tiling_mode(struct ptychite_config *config, struct json_object *value,
-		enum ptychite_property_set_mode mode, char **error) {
+static int config_set_tiling_mode(
+		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
 	if (!json_object_is_type(value, json_type_string)) {
 		*error = "tiling mode must be a string";
 		return -1;
@@ -970,8 +966,8 @@ static struct json_object *config_get_tiling_mode(struct ptychite_config *config
 	return json_object_new_string(string);
 }
 
-static int config_set_tiling_gaps(struct ptychite_config *config, struct json_object *value,
-		enum ptychite_property_set_mode mode, char **error) {
+static int config_set_tiling_gaps(
+		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
 	if (!json_object_is_type(value, json_type_int)) {
 		*error = "tiling gaps must be an integer";
 		return -1;
@@ -1006,8 +1002,7 @@ struct property_entry config_property_table[] = {
 				config_get_keyboard_repeat_delay},
 		{(char *[]){"keyboard", "xkb", "options", NULL}, config_set_keyboard_xkb_options,
 				config_get_keyboard_xkb_options},
-		{(char *[]){"keyboard", "chords", NULL}, config_set_keyboard_chords,
-				config_get_keyboard_chords},
+		{(char *[]){"keyboard", "chords", NULL}, config_set_keyboard_chords, config_get_keyboard_chords},
 
 		{(char *[]){"panel", "enabled", NULL}, config_set_panel_enabled, config_get_panel_enabled},
 		{(char *[]){"panel", "font", NULL}, config_set_panel_font, config_get_panel_font},
@@ -1015,36 +1010,30 @@ struct property_entry config_property_table[] = {
 				config_get_panel_colors_foreground},
 		{(char *[]){"panel", "colors", "background", NULL}, config_set_panel_colors_background,
 				config_get_panel_colors_background},
-		{(char *[]){"panel", "colors", "accent", NULL}, config_set_panel_colors_accent,
-				config_get_panel_colors_accent},
-		{(char *[]){"panel", "colors", "gray1", NULL}, config_set_panel_colors_gray1,
-				config_get_panel_colors_gray1},
-		{(char *[]){"panel", "colors", "gray2", NULL}, config_set_panel_colors_gray2,
-				config_get_panel_colors_gray2},
-		{(char *[]){"panel", "colors", "border", NULL}, config_set_panel_colors_border,
-				config_get_panel_colors_border},
+		{(char *[]){"panel", "colors", "accent", NULL}, config_set_panel_colors_accent, config_get_panel_colors_accent},
+		{(char *[]){"panel", "colors", "gray1", NULL}, config_set_panel_colors_gray1, config_get_panel_colors_gray1},
+		{(char *[]){"panel", "colors", "gray2", NULL}, config_set_panel_colors_gray2, config_get_panel_colors_gray2},
+		{(char *[]){"panel", "colors", "border", NULL}, config_set_panel_colors_border, config_get_panel_colors_border},
 		{(char *[]){"panel", "colors", "seperator", NULL}, config_set_panel_colors_seperator,
 				config_get_panel_colors_seperator},
-		{(char *[]){"panel", "colors", "chord", NULL}, config_set_panel_colors_chord,
-				config_get_panel_colors_chord},
+		{(char *[]){"panel", "colors", "chord", NULL}, config_set_panel_colors_chord, config_get_panel_colors_chord},
 
-		{(char *[]){"views", "map_to_front", NULL}, config_set_views_map_to_front,
-				config_get_views_map_to_front},
+		{(char *[]){"views", "map_to_front", NULL}, config_set_views_map_to_front, config_get_views_map_to_front},
 		{(char *[]){"views", "title_bar", "enabled", NULL}, config_set_views_title_bar_enabled,
 				config_get_views_title_bar_enabled},
-		{(char *[]){"views", "title_bar", "colors", "close", NULL},
-				config_set_views_title_bar_colors_close, config_get_views_title_bar_colors_close},
+		{(char *[]){"views", "title_bar", "colors", "close", NULL}, config_set_views_title_bar_colors_close,
+				config_get_views_title_bar_colors_close},
 		{(char *[]){"views", "border", "thickness", NULL}, config_set_views_border_thickness,
 				config_get_views_border_thickness},
-		{(char *[]){"views", "border", "colors", "active", NULL},
-				config_set_views_border_colors_active, config_get_views_border_colors_active},
-		{(char *[]){"views", "border", "colors", "inactive", NULL},
-				config_set_views_border_colors_inactive, config_get_views_border_colors_inactive},
+		{(char *[]){"views", "border", "colors", "active", NULL}, config_set_views_border_colors_active,
+				config_get_views_border_colors_active},
+		{(char *[]){"views", "border", "colors", "inactive", NULL}, config_set_views_border_colors_inactive,
+				config_get_views_border_colors_inactive},
 
 		{(char *[]){"monitors", "default_scale", NULL}, config_set_monitors_default_scale,
 				config_get_monitors_default_scale},
-		{(char *[]){"monitors", "wallpaper", "filepath", NULL},
-				config_set_monitors_wallpaper_filepath, config_get_monitors_wallpaper_filepath},
+		{(char *[]){"monitors", "wallpaper", "filepath", NULL}, config_set_monitors_wallpaper_filepath,
+				config_get_monitors_wallpaper_filepath},
 		{(char *[]){"monitors", "wallpaper", "mode", NULL}, config_set_monitors_wallpaper_mode,
 				config_get_monitors_wallpaper_mode},
 
@@ -1052,8 +1041,8 @@ struct property_entry config_property_table[] = {
 		{(char *[]){"tiling", "gaps", NULL}, config_set_tiling_gaps, config_get_tiling_gaps},
 };
 
-static int property_path_gather_entry_refs(const char *path, size_t *path_l_out,
-		struct wl_array *entry_refs_out, size_t *entry_refs_l_out, char **error) {
+static int property_path_gather_entry_refs(
+		const char *path, size_t *path_l_out, struct wl_array *entry_refs_out, size_t *entry_refs_l_out, char **error) {
 	wl_array_init(entry_refs_out);
 
 	size_t path_l = 0, *path_token_lens = NULL;
@@ -1122,8 +1111,7 @@ static int property_path_gather_entry_refs(const char *path, size_t *path_l_out,
 			continue;
 		}
 
-		struct property_entry_reference *append =
-				wl_array_add(entry_refs_out, sizeof(struct property_entry_reference));
+		struct property_entry_reference *append = wl_array_add(entry_refs_out, sizeof(struct property_entry_reference));
 		if (!append) {
 			wl_array_release(entry_refs_out);
 			free(path_token_lens);
@@ -1152,8 +1140,8 @@ static int property_path_gather_entry_refs(const char *path, size_t *path_l_out,
 	return 0;
 }
 
-static int config_set_property_inner(struct ptychite_config *config, const char *path,
-		struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
+static int config_set_property_inner(struct ptychite_config *config, const char *path, struct json_object *value,
+		enum ptychite_property_set_mode mode, char **error) {
 	struct wl_array entry_refs;
 	size_t path_l, entry_refs_l;
 	if (property_path_gather_entry_refs(path, &path_l, &entry_refs, &entry_refs_l, error)) {
@@ -1175,8 +1163,7 @@ static int config_set_property_inner(struct ptychite_config *config, const char 
 
 	struct wl_array path_nodes;
 	wl_array_init(&path_nodes);
-	struct property_path_node *root_node =
-			wl_array_add(&path_nodes, sizeof(struct property_path_node));
+	struct property_path_node *root_node = wl_array_add(&path_nodes, sizeof(struct property_path_node));
 	if (!root_node) {
 		*error = "memory error";
 		goto err;
@@ -1220,10 +1207,8 @@ static int config_set_property_inner(struct ptychite_config *config, const char 
 					bool match = true;
 					size_t i, id = node_id;
 					for (i = 1; i < entry_ref->path_l - path_l; i++) {
-						struct property_path_node *parent =
-								&((struct property_path_node *)path_nodes.data)[id];
-						if (strcmp(parent->name,
-									entry_ref->entry->path[entry_ref->path_l - 1 - i])) {
+						struct property_path_node *parent = &((struct property_path_node *)path_nodes.data)[id];
+						if (strcmp(parent->name, entry_ref->entry->path[entry_ref->path_l - 1 - i])) {
 							match = false;
 							break;
 						}
@@ -1248,8 +1233,7 @@ static int config_set_property_inner(struct ptychite_config *config, const char 
 				continue;
 			}
 
-			struct property_path_node *append =
-					wl_array_add(&path_nodes, sizeof(struct property_path_node));
+			struct property_path_node *append = wl_array_add(&path_nodes, sizeof(struct property_path_node));
 			if (!append) {
 				*error = "memory error";
 				goto err;
@@ -1400,8 +1384,7 @@ struct ptychite_chord_binding *ptychite_config_add_chord_binding(struct ptychite
 }
 
 struct ptychite_chord_binding *ptychite_config_scan_into_chord_binding(
-		struct ptychite_config *config, const char *pattern, const char **args, int args_l,
-		char **error) {
+		struct ptychite_config *config, const char *pattern, const char **args, int args_l, char **error) {
 	struct ptychite_chord_binding *chord_binding = ptychite_config_add_chord_binding(config);
 	if (!chord_binding) {
 		*error = "memory error";
@@ -1445,12 +1428,11 @@ int ptychite_config_parse_config(struct ptychite_config *config, char **error) {
 	}
 
 	wlr_log(WLR_INFO, "Parsing config file at %s", filepath);
-	return ptychite_config_set_property_from_file(
-			config, ":", filepath, PTYCHITE_PROPERTY_SET_OVERWRITE, error);
+	return ptychite_config_set_property_from_file(config, ":", filepath, PTYCHITE_PROPERTY_SET_OVERWRITE, error);
 }
 
-int ptychite_config_set_property_from_string(struct ptychite_config *config, const char *path,
-		const char *string, enum ptychite_property_set_mode mode, char **error) {
+int ptychite_config_set_property_from_string(struct ptychite_config *config, const char *path, const char *string,
+		enum ptychite_property_set_mode mode, char **error) {
 	struct json_object *value = json_tokener_parse(string);
 	if (!value) {
 		*error = "json data could not be parsed";
@@ -1462,8 +1444,8 @@ int ptychite_config_set_property_from_string(struct ptychite_config *config, con
 	return return_status;
 }
 
-int ptychite_config_set_property_from_file(struct ptychite_config *config, const char *path,
-		const char *filepath, enum ptychite_property_set_mode mode, char **error) {
+int ptychite_config_set_property_from_file(struct ptychite_config *config, const char *path, const char *filepath,
+		enum ptychite_property_set_mode mode, char **error) {
 	struct json_object *value = json_object_from_file(filepath);
 	if (!value) {
 		*error = "json data could not be parsed";
@@ -1475,8 +1457,8 @@ int ptychite_config_set_property_from_file(struct ptychite_config *config, const
 	return return_status;
 }
 
-char *ptychite_config_get_property(struct ptychite_config *config, const char *path,
-		enum ptychite_json_get_mode mode, char **error) {
+char *ptychite_config_get_property(
+		struct ptychite_config *config, const char *path, enum ptychite_json_get_mode mode, char **error) {
 	struct wl_array entries;
 	size_t entries_l, path_l;
 	if (property_path_gather_entry_refs(path, &path_l, &entries, &entries_l, error)) {
