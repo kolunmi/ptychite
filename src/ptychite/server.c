@@ -32,6 +32,7 @@
 #include <wlr/types/wlr_idle_notify_v1.h>
 #include <wlr/types/wlr_matrix.h>
 #include <wlr/types/wlr_output_management_v1.h>
+#include <wlr/types/wlr_presentation_time.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_screencopy_v1.h>
 #include <wlr/types/wlr_server_decoration.h>
@@ -3192,6 +3193,11 @@ int ptychite_server_init_and_run(struct ptychite_server *server, struct ptychite
 	if (!(server->scene = wlr_scene_create())) {
 		return -1;
 	}
+	struct wlr_presentation *presentation = wlr_presentation_create(server->display, server->backend);
+	if (!presentation) {
+		return -1;
+	}
+	wlr_scene_set_presentation(server->scene, presentation);
 	struct wlr_scene_tree **layers[] = {&server->layers.background, &server->layers.bottom, &server->layers.tiled,
 			&server->layers.floating, &server->layers.fullscreen, &server->layers.top, &server->layers.overlay,
 			&server->layers.block};
