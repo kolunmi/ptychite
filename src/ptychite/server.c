@@ -1450,8 +1450,7 @@ static void monitor_switch_workspace(struct monitor *monitor, struct workspace *
 	}
 
 	monitor_fix_workspaces(monitor);
-	monitor_tile(monitor);
-	if (monitor->panel && monitor->panel->base.scene_buffer->node.enabled) {
+	if (monitor->panel && monitor->panel->base.element.scene_tree->node.enabled) {
 		window_relay_draw_same_size(&monitor->panel->base);
 	}
 
@@ -1466,6 +1465,8 @@ static void monitor_switch_workspace(struct monitor *monitor, struct workspace *
 				wl_container_of(monitor->current_workspace->views_focus.next, new_view, workspace_focus_link);
 		view_focus(new_view, new_view->xdg_toplevel->base->surface);
 	}
+
+	ptychite_server_check_cursor(monitor->server);
 }
 
 static void monitor_disable(struct monitor *monitor) {
