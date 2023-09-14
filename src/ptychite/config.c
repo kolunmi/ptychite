@@ -15,10 +15,6 @@
 #include "macros.h"
 #include "server.h"
 
-#define JSON_ARRAY_FOREACH(arr, i, iter) \
-	for (iter = json_object_array_get_idx(arr, (i = 0)); i < json_object_array_length(arr); \
-			iter = json_object_array_get_idx(arr, ++i))
-
 typedef int (*ptychite_property_set_func_t)(
 		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error);
 
