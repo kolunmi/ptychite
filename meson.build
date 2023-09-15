@@ -20,7 +20,7 @@ add_project_arguments(
 
 cc = meson.get_compiler('c')
 
-wlroots        = subproject('wlroots', default_options: ['examples=false'])
+wlroots        = dependency('wlroots')
 # scenefx        = subproject('scenefx')
 wayland_protos = dependency('wayland-protocols', version: '>=1.18')
 wayland_server = dependency('wayland-server')
@@ -104,7 +104,7 @@ executable(
   dependencies: [
     ptychite_protos,
     wayland_server,
-    wlroots.get_variable('wlroots'),
+    wlroots,
     # scenefx.get_variable('scenefx'),
     xkbcommon,
     json,

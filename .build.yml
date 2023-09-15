@@ -4,6 +4,7 @@ packages:
   - ninja
   - wayland-dev
   - wayland-protocols
+  - wlroots-dev
   - pixman-dev
   - cairo-dev
   - pango-dev
