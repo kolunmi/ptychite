@@ -218,11 +218,13 @@ struct view {
 
 	int initial_width;
 	int initial_height;
+	uint32_t resize_serial;
 	bool focused;
 
 	struct wl_listener map;
 	struct wl_listener unmap;
 	struct wl_listener destroy;
+	struct wl_listener commit;
 	struct wl_listener request_maximize;
 	struct wl_listener request_fullscreen;
 	struct wl_listener set_title;
@@ -1267,7 +1269,7 @@ static void view_resize(struct view *view, int width, int height) {
 	}
 
 	wlr_scene_node_set_position(&view->scene_tree_surface->node, border_thickness, top_thickness);
-	wlr_xdg_toplevel_set_size(view->xdg_toplevel, view->element.width - 2 * border_thickness,
+	view->resize_serial = wlr_xdg_toplevel_set_size(view->xdg_toplevel, view->element.width - 2 * border_thickness,
 			view->element.height - (top_thickness + border_thickness));
 
 	if (view->border.top->node.enabled) {
@@ -1512,9 +1514,28 @@ static void monitor_handle_frame(struct wl_listener *listener, void *data) {
 
 	struct wlr_scene_output *scene_output = wlr_scene_get_scene_output(monitor->server->scene, monitor->output);
 
+	struct monitor *monitor_iter;
+	wl_list_for_each(monitor_iter, &monitor->server->monitors, link) {
+		struct view *view;
+		wl_list_for_each(view, &monitor_iter->current_workspace->views_order, workspace_order_link) {
+			if (!view->resize_serial || view == monitor->server->grabbed_view ||
+					!view->element.scene_tree->node.enabled) {
+				continue;
+			}
+
+			struct wlr_surface_output *surface_output;
+			wl_list_for_each(surface_output, &view->xdg_toplevel->base->surface->current_outputs, link) {
+				if (surface_output->output == monitor->output) {
+					goto skip;
+				}
+			}
+		}
+	}
+
 	wlr_scene_output_commit(scene_output);
 
 	struct timespec now;
+skip:
 	clock_gettime(CLOCK_MONOTONIC, &now);
 	wlr_scene_output_send_frame_done(scene_output, &now);
 }
@@ -2004,6 +2025,14 @@ static void view_begin_interactive(struct view *view, enum cursor_mode mode) {
 	}
 }
 
+static void view_handle_commit(struct wl_listener *listener, void *data) {
+	struct view *view = wl_container_of(listener, view, commit);
+
+	if (view->resize_serial && view->resize_serial <= view->xdg_toplevel->base->current.configure_serial) {
+		view->resize_serial = 0;
+	}
+}
+
 static void view_handle_set_title(struct wl_listener *listener, void *data) {
 	struct view *view = wl_container_of(listener, view, set_title);
 
@@ -2032,6 +2061,8 @@ static void view_handle_map(struct wl_listener *listener, void *data) {
 			window_relay_draw_same_size(&view->monitor->panel->base);
 		}
 	}
+	view->commit.notify = view_handle_commit;
+	wl_signal_add(&view->xdg_toplevel->base->surface->events.commit, &view->commit);
 	view->set_title.notify = view_handle_set_title;
 	wl_signal_add(&view->xdg_toplevel->events.set_title, &view->set_title);
 
