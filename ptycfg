@@ -1,6 +1,6 @@
 #!/bin/sh
 
-for dep in ptymsg jq gum pastel zenity; do
+for dep in ptymsg jq gum zenity pastel; do
   if ! command -v "$dep" >/dev/null; then
     echo "$dep was not found. Please install it." 1>&2
     exit 1
