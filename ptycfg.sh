@@ -1,0 +1,53 @@
+#!/bin/sh
+
+DATA="$(ptymsg get :)" || exit 1
+SELECTION="$(echo "$DATA" |
+  jq -r '(paths(type != "object") | select(all(type == "string"))) as $p | [ (getpath($p) | type), ([ $p[] | tostring ] | join(":")), (getpath($p) | tojson) ] | join(" ")' |
+  gum filter --header 'Choose a property to customize:')" || exit 1
+
+TYPE="$(echo "$SELECTION" | awk '{print $1}')"
+PROPERTY="$(echo "$SELECTION" | awk '{print $2}')"
+VALUE="$(echo "$SELECTION" | awk '{$1=""; $2=""; print $0}')"
+VALUE="${VALUE#??}"
+OVERWRITE=''
+
+case "$TYPE" in
+  array)
+    case "$PROPERTY" in
+      keyboard:chords)
+        PATTERN="$(gum input --header "Enter key pattern (do not quote)" --placeholder 'C-Sh-x S-y M-u')" || exit 1
+        ACTION="$(gum input --header "Now enter your action's arguments, each quoted and comma-seperated" --placeholder '"spawn","foot"')" || exit 1
+        NEW_VALUE="{\"pattern\":\"$PATTERN\",\"action\":[$ACTION]}"
+      ;;
+    esac
+    NEW_VALUE="[$NEW_VALUE]"
+    if [ "$(gum choose --header "would you like to overwrite the array $PROPERTY with this value?" no yes)" = yes ]; then
+      OVERWRITE=1
+    fi
+  ;;
+  boolean)
+    NEW_VALUE="$(gum choose --header "Select the new value of $PROPERTY" true false)" || exit 1
+  ;;
+  number)
+    NEW_VALUE="$(gum input --header "Type the new value of $PROPERTY" --placeholder "$VALUE")" || exit 1
+  ;;
+  string)
+    VALUE="${VALUE#?}"
+    VALUE="${VALUE%?}"
+    case "$PROPERTY" in
+      monitors:wallpaper:mode) NEW_VALUE="$(gum choose --header "Select the new value of $PROPERTY" fit stretch)" || exit 1 ;;
+      tiling:mode) NEW_VALUE="$(gum choose --header "Select the new value of $PROPERTY" traditional none)" || exit 1 ;;
+      *color*) NEW_VALUE="$(pastel pick 2>/dev/null | pastel format hex)" || exit 1 ;;
+      *filepath*) NEW_VALUE="$(gum file)" || exit 1 ;;
+      *) NEW_VALUE="$(gum input --header "Type the new value of $PROPERTY (no need to quote)" --placeholder "$VALUE")" || exit 1 ;;
+    esac
+    NEW_VALUE="\"$NEW_VALUE\""
+  ;;
+esac
+
+if [ -n "$OVERWRITE" ]; then
+  ptymsg set --overwrite "$PROPERTY" "$NEW_VALUE"
+else
+  ptymsg set "$PROPERTY" "$NEW_VALUE"
+fi
+  
