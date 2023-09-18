@@ -44,7 +44,7 @@ case "$TYPE" in
     case "$PROPERTY" in
       monitors:wallpaper:mode) NEW_VALUE="$(gum choose --header "Select the new value of $PROPERTY" fit stretch)" || exit 1 ;;
       tiling:mode) NEW_VALUE="$(gum choose --header "Select the new value of $PROPERTY" traditional none)" || exit 1 ;;
-      *color*) NEW_VALUE="$(pastel pick 2>/dev/null | pastel format hex)" || exit 1 ;;
+      *color*) NEW_VALUE="$(zenity --color-selection --color="$(pastel format rgb "$VALUE")" 2>/dev/null | pastel format hex)" || exit 1 ;;
       *filepath*) NEW_VALUE="$(gum file)" || exit 1 ;;
       *) NEW_VALUE="$(gum input --header "Type the new value of $PROPERTY (no need to quote)" --placeholder "$VALUE")" || exit 1 ;;
     esac
