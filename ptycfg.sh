@@ -1,5 +1,12 @@
 #!/bin/sh
 
+for dep in ptymsg jq gum pastel zenity; do
+  if ! command -v "$dep" >/dev/null; then
+    echo "$dep was not found. Please install it." 1>&2
+    exit 1
+  fi
+done
+
 DATA="$(ptymsg get :)" || exit 1
 SELECTION="$(echo "$DATA" |
   jq -r '(paths(type != "object") | select(all(type == "string"))) as $p | [ (getpath($p) | type), ([ $p[] | tostring ] | join(":")), (getpath($p) | tojson) ] | join(" ")' |
