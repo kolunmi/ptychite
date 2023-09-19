@@ -22,7 +22,7 @@ case "$TYPE" in
   array)
     case "$PROPERTY" in
       keyboard:chords)
-        PATTERN="$(gum input --header "Enter key pattern (do not quote)" --placeholder 'C-Sh-x S-y M-u')" || exit 1
+        PATTERN="$(gum input --header "Enter key pattern (do not quote)" --placeholder 'C-Sh-X S-y M-u')" || exit 1
         ACTION="$(gum input --header "Now enter your action's arguments, each quoted and comma-seperated" --placeholder '"spawn","foot"')" || exit 1
         NEW_VALUE="{\"pattern\":\"$PATTERN\",\"action\":[$ACTION]}"
       ;;
