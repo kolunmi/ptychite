@@ -7,7 +7,7 @@ for dep in ptymsg jq gum zenity pastel; do
   fi
 done
 
-DATA="$(ptymsg get :)" || exit 1
+DATA="$(ptymsg get --compact :)" || exit 1
 SELECTION="$(echo "$DATA" |
   jq -r '(paths(type != "object") | select(all(type == "string"))) as $p | [ (getpath($p) | type), ([ $p[] | tostring ] | join(":")), (getpath($p) | tojson) ] | join(" ")' |
   gum filter --header 'Choose a property to customize:')" || exit 1
