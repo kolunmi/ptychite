@@ -57,4 +57,3 @@ if [ -n "$OVERWRITE" ]; then
 else
   ptymsg set "$PROPERTY" "$NEW_VALUE"
 fi
-  

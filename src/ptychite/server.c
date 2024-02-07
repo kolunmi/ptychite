@@ -25,8 +25,8 @@
 #include <wlr/types/wlr_data_control_v1.h>
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_export_dmabuf_v1.h>
+#include <wlr/types/wlr_fractional_scale_v1.h>
 #include <wlr/types/wlr_gamma_control_v1.h>
-#include <wlr/types/wlr_idle.h>
 #include <wlr/types/wlr_idle_inhibit_v1.h>
 #include <wlr/types/wlr_idle_notify_v1.h>
 #include <wlr/types/wlr_matrix.h>
@@ -82,6 +82,7 @@ struct ptychite_server {
 	struct wlr_allocator *allocator;
 
 	struct wlr_scene *scene;
+	struct wlr_scene_output_layout *scene_layout;
 	struct {
 		struct wlr_scene_tree *background;
 		struct wlr_scene_tree *bottom;
@@ -127,10 +128,10 @@ struct ptychite_server {
 	struct wl_listener output_mgr_apply;
 	struct wl_listener output_mgr_test;
 
-	struct wlr_idle *idle;
-	struct wlr_idle_notifier_v1 *idle_notifier;
-	struct wlr_idle_inhibit_manager_v1 *idle_inhibit_mgr;
-	struct wl_listener idle_inhibitor_create;
+	/* struct wlr_idle *idle; */
+	/* struct wlr_idle_notifier_v1 *idle_notifier; */
+	/* struct wlr_idle_inhibit_manager_v1 *idle_inhibit_mgr; */
+	/* struct wl_listener idle_inhibitor_create; */
 
 	struct wl_event_source *time_tick;
 
@@ -158,6 +159,7 @@ struct monitor {
 	struct panel *panel;
 
 	struct wl_listener frame;
+	struct wl_listener request_state;
 	struct wl_listener destroy;
 };
 
@@ -1286,7 +1288,7 @@ static void view_resize(struct view *view, int width, int height) {
 }
 
 static void surface_unfocus(struct wlr_surface *surface) {
-	struct wlr_xdg_surface *xdg_surface = wlr_xdg_surface_from_wlr_surface(surface);
+	struct wlr_xdg_surface *xdg_surface = wlr_xdg_surface_try_from_wlr_surface(surface);
 	assert(xdg_surface && xdg_surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL);
 	wlr_xdg_toplevel_set_activated(xdg_surface->toplevel, false);
 
@@ -1532,7 +1534,7 @@ static void monitor_handle_frame(struct wl_listener *listener, void *data) {
 		}
 	}
 
-	wlr_scene_output_commit(scene_output);
+	wlr_scene_output_commit(scene_output, NULL);
 
 	struct timespec now;
 skip:
@@ -1540,10 +1542,18 @@ skip:
 	wlr_scene_output_send_frame_done(scene_output, &now);
 }
 
+static void monitor_handle_request_state(struct wl_listener *listener, void *data) {
+	struct monitor *monitor = wl_container_of(listener, monitor, request_state);
+	const struct wlr_output_event_request_state *event = data;
+
+	wlr_output_commit_state(monitor->output, event->state);
+}
+
 static void monitor_handle_destroy(struct wl_listener *listener, void *data) {
 	struct monitor *monitor = wl_container_of(listener, monitor, destroy);
 
 	wl_list_remove(&monitor->frame.link);
+	wl_list_remove(&monitor->request_state.link);
 	wl_list_remove(&monitor->destroy.link);
 	wl_list_remove(&monitor->link);
 
@@ -2015,13 +2025,13 @@ static void view_begin_interactive(struct view *view, enum cursor_mode mode) {
 	if (mode == CURSOR_MOVE) {
 		server->grab_x = server->cursor->x - view->element.scene_tree->node.x;
 		server->grab_y = server->cursor->y - view->element.scene_tree->node.y;
-		wlr_xcursor_manager_set_cursor_image(server->cursor_mgr, "fleur", server->cursor);
+		wlr_cursor_set_xcursor(server->cursor, server->cursor_mgr, "fleur");
 	} else {
 		double border_x = view->element.scene_tree->node.x + view->element.width;
 		double border_y = view->element.scene_tree->node.y + view->element.height;
 		server->grab_x = server->cursor->x - border_x;
 		server->grab_y = server->cursor->y - border_y;
-		wlr_xcursor_manager_set_cursor_image(server->cursor_mgr, "bottom_right_corner", server->cursor);
+		wlr_cursor_set_xcursor(server->cursor, server->cursor_mgr, "bottom_right_corner");
 	}
 }
 
@@ -2340,7 +2350,7 @@ static void server_process_cursor_motion(struct ptychite_server *server, uint32_
 	if (element) {
 		switch (element->type) {
 		case ELEMENT_VIEW: {
-			struct wlr_scene_surface *scene_surface = wlr_scene_surface_from_buffer(scene_buffer);
+			struct wlr_scene_surface *scene_surface = wlr_scene_surface_try_from_buffer(scene_buffer);
 			if (scene_surface) {
 				wlr_seat_pointer_notify_enter(server->seat, scene_surface->surface, sx, sy);
 				wlr_seat_pointer_notify_motion(server->seat, time, sx, sy);
@@ -2364,12 +2374,12 @@ static void server_process_cursor_motion(struct ptychite_server *server, uint32_
 			}
 			window_relay_pointer_move(window, sx, sy);
 			wlr_seat_pointer_clear_focus(server->seat);
-			wlr_xcursor_manager_set_cursor_image(server->cursor_mgr, "left_ptr", server->cursor);
+			wlr_cursor_set_xcursor(server->cursor, server->cursor_mgr, "left_ptr");
 			break;
 		}
 		}
 	} else {
-		wlr_xcursor_manager_set_cursor_image(server->cursor_mgr, "left_ptr", server->cursor);
+		wlr_cursor_set_xcursor(server->cursor, server->cursor_mgr, "left_ptr");
 		wlr_seat_pointer_clear_focus(server->seat);
 		if (server->hovered_window) {
 			window_relay_pointer_leave(server->hovered_window);
@@ -2634,14 +2644,18 @@ static void server_handle_new_output(struct wl_listener *listener, void *data) {
 		return;
 	}
 
-	wlr_output_enable(output, true);
+	struct wlr_output_state state;
+	wlr_output_state_init(&state);
+	wlr_output_state_set_enabled(&state, true);
+
 	struct wlr_output_mode *mode = wlr_output_preferred_mode(output);
 	if (mode) {
-		wlr_output_set_mode(output, mode);
+		wlr_output_state_set_mode(&state, mode);
 	}
-	wlr_output_set_scale(output, server->compositor->config->monitors.default_scale);
-	wlr_xcursor_manager_load(server->cursor_mgr, server->compositor->config->monitors.default_scale);
-	wlr_output_commit(output);
+	wlr_output_state_set_scale(&state, server->compositor->config->monitors.default_scale);
+
+	wlr_output_commit_state(output, &state);
+	wlr_output_state_finish(&state);
 
 	output->data = monitor;
 	monitor->output = output;
@@ -2650,6 +2664,8 @@ static void server_handle_new_output(struct wl_listener *listener, void *data) {
 
 	monitor->frame.notify = monitor_handle_frame;
 	wl_signal_add(&monitor->output->events.frame, &monitor->frame);
+	monitor->request_state.notify = monitor_handle_request_state;
+	wl_signal_add(&monitor->output->events.request_state, &monitor->request_state);
 	monitor->destroy.notify = monitor_handle_destroy;
 	wl_signal_add(&monitor->output->events.destroy, &monitor->destroy);
 
@@ -2676,7 +2692,9 @@ static void server_handle_new_output(struct wl_listener *listener, void *data) {
 		}
 	}
 
-	wlr_output_layout_add_auto(server->output_layout, output);
+	struct wlr_output_layout_output *l_output = wlr_output_layout_add_auto(server->output_layout, output);
+	struct wlr_scene_output *scene_output = wlr_scene_output_create(server->scene, output);
+	wlr_scene_output_layout_add_output(server->scene_layout, l_output, scene_output);
 }
 
 static void server_handle_new_xdg_surface(struct wl_listener *listener, void *data) {
@@ -2684,7 +2702,7 @@ static void server_handle_new_xdg_surface(struct wl_listener *listener, void *da
 	struct wlr_xdg_surface *xdg_surface = data;
 
 	if (xdg_surface->role == WLR_XDG_SURFACE_ROLE_POPUP) {
-		struct wlr_xdg_surface *parent = wlr_xdg_surface_from_wlr_surface(xdg_surface->popup->parent);
+		struct wlr_xdg_surface *parent = wlr_xdg_surface_try_from_wlr_surface(xdg_surface->popup->parent);
 		assert(parent);
 		struct wlr_scene_tree *parent_tree = parent->data;
 		struct wlr_scene_tree *scene_tree = wlr_scene_xdg_surface_create(parent_tree, xdg_surface);
@@ -2729,9 +2747,9 @@ static void server_handle_new_xdg_surface(struct wl_listener *listener, void *da
 	}
 
 	view->map.notify = view_handle_map;
-	wl_signal_add(&xdg_surface->events.map, &view->map);
+	wl_signal_add(&xdg_surface->surface->events.map, &view->map);
 	view->unmap.notify = view_handle_unmap;
-	wl_signal_add(&xdg_surface->events.unmap, &view->unmap);
+	wl_signal_add(&xdg_surface->surface->events.unmap, &view->unmap);
 	view->destroy.notify = view_handle_destroy;
 	wl_signal_add(&xdg_surface->surface->events.destroy, &view->destroy);
 
@@ -2778,7 +2796,7 @@ static void server_handle_cursor_button(struct wl_listener *listener, void *data
 		if (server->cursor_mode != CURSOR_PASSTHROUGH) {
 			server->cursor_mode = CURSOR_PASSTHROUGH;
 			server->grabbed_view = NULL;
-			wlr_xcursor_manager_set_cursor_image(server->cursor_mgr, "left_ptr", server->cursor);
+			wlr_cursor_set_xcursor(server->cursor, server->cursor_mgr, "left_ptr");
 		}
 	}
 
@@ -2791,7 +2809,7 @@ static void server_handle_cursor_button(struct wl_listener *listener, void *data
 		case ELEMENT_VIEW:
 			if (event->state == WLR_BUTTON_PRESSED) {
 				struct view *view = element_get_view(element);
-				struct wlr_scene_surface *scene_surface = wlr_scene_surface_from_buffer(scene_buffer);
+				struct wlr_scene_surface *scene_surface = wlr_scene_surface_try_from_buffer(scene_buffer);
 				view_focus(view, scene_surface->surface);
 
 				struct wlr_keyboard *keyboard = wlr_seat_get_keyboard(server->seat);
@@ -3165,11 +3183,10 @@ int ptychite_server_init_and_run(struct ptychite_server *server, struct ptychite
 		return -1;
 	};
 
-	if (!(server->backend = wlr_backend_autocreate(server->display))) {
+	if (!(server->backend = wlr_backend_autocreate(server->display, &server->session))) {
 		wlr_log(WLR_ERROR, "failed to create wlr_backend");
 		return -1;
 	}
-	server->session = wlr_backend_get_session(server->backend);
 
 	if (!(server->renderer = wlr_renderer_autocreate(server->backend))) {
 		wlr_log(WLR_ERROR, "failed to create wlr_renderer");
@@ -3185,7 +3202,7 @@ int ptychite_server_init_and_run(struct ptychite_server *server, struct ptychite
 		return -1;
 	}
 
-	wlr_compositor_create(server->display, server->renderer);
+	wlr_compositor_create(server->display, 5, server->renderer);
 	wlr_subcompositor_create(server->display);
 	wlr_data_device_manager_create(server->display);
 
@@ -3211,6 +3228,10 @@ int ptychite_server_init_and_run(struct ptychite_server *server, struct ptychite
 	if (!(server->scene = wlr_scene_create())) {
 		return -1;
 	}
+	if (!(server->scene_layout = wlr_scene_attach_output_layout(server->scene, server->output_layout))) {
+		return -1;
+	}
+
 	struct wlr_presentation *presentation = wlr_presentation_create(server->display, server->backend);
 	if (!presentation) {
 		return -1;
@@ -3230,11 +3251,11 @@ int ptychite_server_init_and_run(struct ptychite_server *server, struct ptychite
 		return -1;
 	}
 
-	server->idle = wlr_idle_create(server->display);
-	server->idle_notifier = wlr_idle_notifier_v1_create(server->display);
-	server->idle_inhibit_mgr = wlr_idle_inhibit_v1_create(server->display);
-	server->idle_inhibitor_create.notify = server_handle_idle_inhibitor_create;
-	wl_signal_add(&server->idle_inhibit_mgr->events.new_inhibitor, &server->idle_inhibitor_create);
+	/* server->idle = wlr_idle_create(server->display); */
+	/* server->idle_notifier = wlr_idle_notifier_v1_create(server->display); */
+	/* server->idle_inhibit_mgr = wlr_idle_inhibit_v1_create(server->display); */
+	/* server->idle_inhibitor_create.notify = server_handle_idle_inhibitor_create; */
+	/* wl_signal_add(&server->idle_inhibit_mgr->events.new_inhibitor, &server->idle_inhibitor_create); */
 
 	wl_list_init(&server->views);
 	server->xdg_shell = wlr_xdg_shell_create(server->display, 3);
@@ -3257,7 +3278,7 @@ int ptychite_server_init_and_run(struct ptychite_server *server, struct ptychite
 	server->cursor_frame.notify = server_handle_cursor_frame;
 	wl_signal_add(&server->cursor->events.frame, &server->cursor_frame);
 
-	wlr_xcursor_manager_set_cursor_image(server->cursor_mgr, "left_ptr", server->cursor);
+	wlr_cursor_set_xcursor(server->cursor, server->cursor_mgr, "left_ptr");
 
 	wl_list_init(&server->keyboards);
 	server->new_input.notify = server_handle_new_input;
@@ -3275,7 +3296,7 @@ int ptychite_server_init_and_run(struct ptychite_server *server, struct ptychite
 	wlr_gamma_control_manager_v1_create(server->display);
 	wlr_screencopy_manager_v1_create(server->display);
 	wlr_export_dmabuf_manager_v1_create(server->display);
-	wlr_single_pixel_buffer_manager_v1_create(server->display);
+	wlr_fractional_scale_manager_v1_create(server->display, 1);
 	wlr_data_control_manager_v1_create(server->display);
 
 	struct wlr_server_decoration_manager *server_decoration_manager =

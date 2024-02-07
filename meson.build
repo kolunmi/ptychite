@@ -12,7 +12,6 @@ project(
 add_project_arguments(
   [
     '-DWLR_USE_UNSTABLE',
-
     '-Wno-unused-parameter',
   ],
   language: 'c',
@@ -21,7 +20,6 @@ add_project_arguments(
 cc = meson.get_compiler('c')
 
 wlroots        = dependency('wlroots')
-# scenefx        = subproject('scenefx')
 wayland_protos = dependency('wayland-protocols', version: '>=1.18')
 wayland_server = dependency('wayland-server')
 wayland_client = dependency('wayland-client')
@@ -105,7 +103,6 @@ executable(
     ptychite_protos,
     wayland_server,
     wlroots,
-    # scenefx.get_variable('scenefx'),
     xkbcommon,
     json,
     cairo,
