@@ -19,7 +19,7 @@ add_project_arguments(
 
 cc = meson.get_compiler('c')
 
-wlroots        = dependency('wlroots')
+wlroots        = dependency('wlroots', version: '>=0.17.1')
 wayland_protos = dependency('wayland-protocols', version: '>=1.18')
 wayland_server = dependency('wayland-server')
 wayland_client = dependency('wayland-client')
@@ -41,57 +41,61 @@ wayland_scanner_server_header = generator(
   output: '@BASENAME@-protocol.h',
   arguments: ['server-header', '@INPUT@', '@OUTPUT@'],
 )
-
 wayland_scanner_client_header = generator(
   wayland_scanner,
   output: '@BASENAME@-client-protocol.h',
   arguments: ['client-header', '@INPUT@', '@OUTPUT@'],
 )
-
 wayland_scanner_code = generator(
   wayland_scanner,
   output: '@BASENAME@-protocol.c',
   arguments: ['private-code', '@INPUT@', '@OUTPUT@'],
 )
 
-ptychite_protocols = [
-  [wl_protocol_dir, 'stable/xdg-shell/xdg-shell.xml'],
-  ['protocols/wlr-layer-shell-unstable-v1.xml'],
-  ['protocols/wlr-output-power-management-unstable-v1.xml'],
-  ['protocols/ptychite-message-unstable-v1.xml'],
+server_protoxmls = [
+  join_paths(wl_protocol_dir, 'stable/xdg-shell/xdg-shell.xml'),
+  'protocols/wlr-layer-shell-unstable-v1.xml',
+  'protocols/wlr-output-power-management-unstable-v1.xml',
+  'protocols/ptychite-message-unstable-v1.xml',
 ]
 
-ptyclient_protocols = [  
-  ['protocols/ptychite-message-unstable-v1.xml'],
-]
-
-ptychite_protos = []
-foreach p : ptychite_protocols
-  xml = join_paths(p)
+server_protosrcs = []
+foreach xml : server_protoxmls
   header = wayland_scanner_server_header.process(xml)
   code = wayland_scanner_code.process(xml)
 
-  ptychite_protos += [header, code]
+  server_protosrcs += [header, code]
 endforeach
-ptychite_protos = declare_dependency(
-  sources: ptychite_protos,
+server_protos = declare_dependency(
+  sources: server_protosrcs,
 )
 
-ptyclient_protos = []
-foreach p : ptyclient_protocols
-  xml = join_paths(p)
+client_protoxmls = [
+  'protocols/ptychite-message-unstable-v1.xml',
+]
+
+client_protosrcs = []
+foreach xml : client_protoxmls
   header = wayland_scanner_client_header.process(xml)
   code = wayland_scanner_code.process(xml)
 
-  ptyclient_protos += [header, code]
+  client_protosrcs += [header, code]
 endforeach
-ptyclient_protos = declare_dependency(
-  sources: ptyclient_protos,
+client_protos = declare_dependency(
+  sources: client_protosrcs,
 )
 
 executable(
   'ptychite',
   [
+    # .h
+    'src/ptychite/compositor.h',
+    'src/ptychite/server.h',
+    'src/ptychite/config.h',
+    'src/ptychite/json.h',
+    'src/ptychite/macros.h',
+
+    # .c
     'src/ptychite/ptychite.c',
     'src/ptychite/compositor.c',
     'src/ptychite/server.c',
@@ -100,7 +104,7 @@ executable(
   ],
   include_directories: [include_directories('.')],
   dependencies: [
-    ptychite_protos,
+    server_protos,
     wayland_server,
     wlroots,
     xkbcommon,
@@ -122,7 +126,7 @@ executable(
   ],
   include_directories: [include_directories('.')],
   dependencies: [
-    ptyclient_protos,
+    client_protos,
     wayland_client,
     json,
   ],
