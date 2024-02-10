@@ -1,11 +1,29 @@
 #!/bin/sh
 
-for dep in ptymsg jq gum zenity pastel; do
+for dep in ptymsg jq gum zenity; do
   if ! command -v "$dep" >/dev/null; then
     echo "$dep was not found. Please install it." 1>&2
     exit 1
   fi
 done
+
+convert_to_rgb() {
+  HEX="$1"
+  HEX="${HEX#?}"
+  R="0x$(echo "$HEX" | cut -c1-2)"
+  G="0x$(echo "$HEX" | cut -c3-4)"
+  B="0x$(echo "$HEX" | cut -c5-6)"
+  A="0x$(echo "$HEX" | cut -c7-8)"
+  printf "rgba(%d,%d,%d,%d)\n" "$R" "$G" "$B" "$A"
+}
+
+convert_to_hex() {
+  RGB="$1"
+  RGB="${RGB#rgb(}"
+  RGB="${RGB#rgba(}"
+  RGB="${RGB%)}"
+  echo "$RGB" | awk -F, '{if($4==""){$4=255}; printf("#%02x%02x%02x%02x\n", $1, $2, $3, $4)}'
+}
 
 DATA="$(ptymsg get --compact :)" || exit 1
 SELECTION="$(echo "$DATA" |
@@ -44,7 +62,7 @@ case "$TYPE" in
     case "$PROPERTY" in
       monitors:wallpaper:mode) NEW_VALUE="$(gum choose --header "Select the new value of $PROPERTY" fit stretch)" || exit 1 ;;
       tiling:mode) NEW_VALUE="$(gum choose --header "Select the new value of $PROPERTY" traditional none)" || exit 1 ;;
-      *color*) NEW_VALUE="$(zenity --color-selection --color="$(pastel format rgb "$VALUE")" 2>/dev/null | pastel format hex)" || exit 1 ;;
+      *color*) NEW_VALUE="$(convert_to_hex "$(zenity --color-selection --color="$(convert_to_rgb "$VALUE")" 2>/dev/null)")" || exit 1 ;;
       *filepath*) NEW_VALUE="$(gum file)" || exit 1 ;;
       *) NEW_VALUE="$(gum input --header "Type the new value of $PROPERTY (no need to quote)" --placeholder "$VALUE")" || exit 1 ;;
     esac
