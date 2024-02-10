@@ -114,7 +114,6 @@ A list of all properties to filter through will appear. You will be prompted to 
 * [jq](https://github.com/jqlang/jq) for processing ptymsg output
 * [gum](https://github.com/charmbracelet/gum) for creating the cli
 * [zenity](https://gitlab.gnome.org/GNOME/zenity) for the color picker
-* [pastel](https://github.com/sharkdp/pastel) for formatting colors
 
 ## Contributing
 Thank you for your interest in my project!! If you would like to contribute, please send patches to [~kolunmi/ptychite@lists.sr.ht](https://lists.sr.ht/~kolunmi/ptychite).
