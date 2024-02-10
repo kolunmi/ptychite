@@ -5,7 +5,8 @@
 #include <wlr/util/box.h>
 #include <wlr/interfaces/wlr_buffer.h>
 #include <wlr/types/wlr_pointer.h>
-#include <cairo.h>
+#include <wlr/types/wlr_scene.h>
+#include <wlr/types/wlr_xdg_shell.h>
 
 struct ptychite_compositor;
 struct ptychite_server;
@@ -123,6 +124,8 @@ struct ptychite_monitor {
 	struct wl_listener destroy;
 };
 
+void monitor_switch_workspace(struct ptychite_monitor *monitor, struct ptychite_workspace *workspace);
+
 struct ptychite_keyboard {
 	struct wl_list link;
 	struct ptychite_server *server;
@@ -137,6 +140,8 @@ struct ptychite_mouse_region {
 	struct wlr_box box;
 	bool entered;
 };
+
+bool mouse_region_update_state(struct ptychite_mouse_region *region, double x, double y);
 
 struct ptychite_workspace {
 	struct wl_list link;
@@ -191,6 +196,10 @@ struct ptychite_view {
 	struct wl_listener request_fullscreen;
 	struct wl_listener set_title;
 };
+
+void view_focus(struct ptychite_view *view, struct wlr_surface *surface);
+void view_begin_interactive(struct ptychite_view *view, enum ptychite_cursor_mode mode);
+
 
 
 struct ptychite_server *ptychite_server_create(void);

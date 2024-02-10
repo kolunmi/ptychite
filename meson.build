@@ -92,6 +92,7 @@ executable(
     'src/ptychite/compositor.h',
     'src/ptychite/server.h',
     'src/ptychite/buffer.h',
+    'src/ptychite/draw.h',
     'src/ptychite/windows/windows.h',
     'src/ptychite/config.h',
     'src/ptychite/json.h',
@@ -103,9 +104,13 @@ executable(
     
     'src/ptychite/server.c',
     'src/ptychite/buffer.c',
+    'src/ptychite/draw.c',
     
     'src/ptychite/windows/windows.c',
     'src/ptychite/windows/wallpaper.c',
+    'src/ptychite/windows/panel.c',
+    'src/ptychite/windows/control.c',
+    'src/ptychite/windows/titlebar.c',
     
     'src/ptychite/config.c',
     'src/ptychite/json.c',

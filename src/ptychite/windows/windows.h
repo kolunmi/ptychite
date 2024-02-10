@@ -1,6 +1,8 @@
 #ifndef PTYCHITE_WINDOWS_H
 #define PTYCHITE_WINDOWS_H
 
+#include <cairo.h>
+
 #include "../server.h"
 
 struct ptychite_window {
@@ -54,6 +56,10 @@ struct ptychite_panel {
 	} regions;
 };
 
+extern const struct ptychite_window_impl panel_window_impl;
+
+void panel_draw_auto(struct ptychite_panel *panel);
+
 /* Control */
 struct ptychite_control {
 	struct ptychite_window base;
@@ -62,6 +68,12 @@ struct ptychite_control {
 		struct wlr_box box;
 	} time;
 };
+
+extern const struct ptychite_window_impl control_window_impl;
+
+void control_draw_auto(struct ptychite_control *control);
+void control_show(struct ptychite_control *control);
+void control_hide(struct ptychite_control *control);
 
 /* Title Bar */
 struct ptychite_title_bar {
@@ -73,5 +85,7 @@ struct ptychite_title_bar {
 		struct ptychite_mouse_region close;
 	} regions;
 };
+
+extern const struct ptychite_window_impl title_bar_window_impl;
 
 #endif
