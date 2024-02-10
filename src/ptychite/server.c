@@ -50,245 +50,7 @@
 #include "macros.h"
 #include "ptychite-message-unstable-v1-protocol.h"
 #include "server.h"
-
-enum cursor_mode {
-	CURSOR_PASSTHROUGH,
-	CURSOR_MOVE,
-	CURSOR_RESIZE,
-};
-
-enum element_type {
-	ELEMENT_VIEW,
-	ELEMENT_WINDOW,
-};
-
-enum action_func_data_mode {
-	ACTION_FUNC_DATA_NONE,
-	ACTION_FUNC_DATA_INT,
-	ACTION_FUNC_DATA_STRING,
-	ACTION_FUNC_DATA_ARGV,
-};
-
-typedef void (*action_func_t)(struct ptychite_server *compositor, void *data);
-
-struct ptychite_server {
-	struct ptychite_compositor *compositor;
-	bool terminated;
-
-	struct wl_display *display;
-	struct wlr_backend *backend;
-	struct wlr_session *session;
-	struct wlr_renderer *renderer;
-	struct wlr_allocator *allocator;
-
-	struct wlr_scene *scene;
-	struct wlr_scene_output_layout *scene_layout;
-	struct {
-		struct wlr_scene_tree *background;
-		struct wlr_scene_tree *bottom;
-		struct wlr_scene_tree *tiled;
-		struct wlr_scene_tree *floating;
-		struct wlr_scene_tree *fullscreen;
-		struct wlr_scene_tree *top;
-		struct wlr_scene_tree *overlay;
-		struct wlr_scene_tree *block;
-	} layers;
-
-	struct wlr_xdg_shell *xdg_shell;
-	struct wl_listener new_xdg_surface;
-	struct wl_listener new_xdg_decoration;
-	struct wl_list views;
-
-	struct wlr_cursor *cursor;
-	struct wlr_xcursor_manager *cursor_mgr;
-	struct wl_listener cursor_motion;
-	struct wl_listener cursor_motion_absolute;
-	struct wl_listener cursor_button;
-	struct wl_listener cursor_axis;
-	struct wl_listener cursor_frame;
-
-	struct wlr_seat *seat;
-	struct wl_listener new_input;
-	struct wl_listener request_cursor;
-	struct wl_listener request_set_selection;
-	struct wl_list keyboards;
-	enum cursor_mode cursor_mode;
-	struct view *grabbed_view;
-	struct window *hovered_window;
-	double grab_x, grab_y;
-	struct wl_array keys;
-
-	struct wlr_output_layout *output_layout;
-	struct wl_list monitors;
-	struct monitor *active_monitor;
-	struct wl_listener new_output;
-	struct wl_listener layout_change;
-
-	struct wlr_output_manager_v1 *output_mgr;
-	struct wl_listener output_mgr_apply;
-	struct wl_listener output_mgr_test;
-
-	/* struct wlr_idle *idle; */
-	/* struct wlr_idle_notifier_v1 *idle_notifier; */
-	/* struct wlr_idle_inhibit_manager_v1 *idle_inhibit_mgr; */
-	/* struct wl_listener idle_inhibitor_create; */
-
-	struct wl_event_source *time_tick;
-
-	char panel_date[128];
-	struct control *control;
-	const char *control_greeting;
-};
-
-struct ptychite_action {
-	struct wl_list link;
-	action_func_t action_func;
-	void *data;
-};
-
-struct monitor {
-	struct wl_list link;
-	struct ptychite_server *server;
-	struct wlr_output *output;
-	struct wlr_box geometry;
-	struct wlr_box window_geometry;
-	struct wl_list views;
-	struct wl_list workspaces;
-	struct workspace *current_workspace;
-	struct wallpaper *wallpaper;
-	struct panel *panel;
-
-	struct wl_listener frame;
-	struct wl_listener request_state;
-	struct wl_listener destroy;
-};
-
-struct keyboard {
-	struct wl_list link;
-	struct ptychite_server *server;
-	struct wlr_keyboard *keyboard;
-
-	struct wl_listener modifiers;
-	struct wl_listener key;
-	struct wl_listener destroy;
-};
-
-struct mouse_region {
-	struct wlr_box box;
-	bool entered;
-};
-
-struct workspace {
-	struct wl_list link;
-	struct wl_list views_order;
-	struct wl_list views_focus;
-	struct {
-		struct {
-			int views_in_master;
-			double master_factor;
-			bool right_master;
-		} traditional;
-	} tiling;
-	struct mouse_region region;
-};
-
-struct element {
-	enum element_type type;
-	struct wlr_scene_tree *scene_tree;
-	int width, height;
-};
-
-struct view {
-	struct element element;
-	struct wl_list server_link;
-	struct wl_list monitor_link;
-	struct wl_list workspace_order_link;
-	struct wl_list workspace_focus_link;
-
-	struct ptychite_server *server;
-	struct monitor *monitor;
-	struct workspace *workspace;
-	struct wlr_xdg_toplevel *xdg_toplevel;
-	struct wlr_scene_tree *scene_tree_surface;
-	struct title_bar *title_bar;
-	struct {
-		struct wlr_scene_rect *top;
-		struct wlr_scene_rect *right;
-		struct wlr_scene_rect *bottom;
-		struct wlr_scene_rect *left;
-	} border;
-
-	int initial_width;
-	int initial_height;
-	uint32_t resize_serial;
-	bool focused;
-
-	struct wl_listener map;
-	struct wl_listener unmap;
-	struct wl_listener destroy;
-	struct wl_listener commit;
-	struct wl_listener request_maximize;
-	struct wl_listener request_fullscreen;
-	struct wl_listener set_title;
-};
-
-struct buffer {
-	struct wlr_buffer base;
-	cairo_surface_t *surface;
-	cairo_t *cairo;
-};
-
-struct window {
-	struct element element;
-	struct ptychite_server *server;
-	struct wlr_output *output;
-	struct wlr_scene_buffer *scene_buffer;
-	const struct window_impl *impl;
-
-	struct wl_listener destroy;
-};
-
-struct window_impl {
-	void (*draw)(struct window *window, cairo_t *cairo, int surface_width, int surface_height, float scale);
-	void (*handle_pointer_move)(struct window *window, double x, double y);
-	void (*handle_pointer_button)(struct window *window, double x, double y, struct wlr_pointer_button_event *event);
-	void (*handle_pointer_enter)(struct window *window);
-	void (*handle_pointer_leave)(struct window *window);
-	void (*destroy)(struct window *window);
-};
-
-struct wallpaper {
-	struct window base;
-	struct monitor *monitor;
-};
-
-struct panel {
-	struct window base;
-	struct monitor *monitor;
-
-	struct {
-		struct mouse_region shell;
-		struct mouse_region time;
-	} regions;
-};
-
-struct control {
-	struct window base;
-
-	struct {
-		struct wlr_box box;
-	} time;
-};
-
-struct title_bar {
-	struct window base;
-	struct view *view;
-
-	struct {
-		struct mouse_region hide;
-		struct mouse_region close;
-	} regions;
-};
+#include "windows/windows.h"
 
 static int protocol_json_get_mode_convert_to_native(
 		enum zptychite_message_v1_json_get_mode mode, enum ptychite_json_get_mode *mode_out) {
@@ -376,7 +138,7 @@ static void message_get_property(
 	free(string);
 }
 
-static struct json_object *view_describe(struct view *view) {
+static struct json_object *view_describe(struct ptychite_view *view) {
 	struct json_object *description = json_object_new_object();
 	if (!description) {
 		return NULL;
@@ -430,14 +192,14 @@ static void message_dump_views(struct wl_client *client, struct wl_resource *res
 			return;
 		}
 
-		struct monitor *monitor = output->data;
+		struct ptychite_monitor *monitor = output->data;
 		if (!(array = json_object_new_array_ext(wl_list_length(&monitor->views)))) {
 			CALLBACK_FAILURE_SEND_AND_DESTROY(callback, "memory error");
 			return;
 		}
 
 		size_t idx = 0;
-		struct view *view;
+		struct ptychite_view *view;
 		wl_list_for_each(view, &monitor->views, monitor_link) {
 			struct json_object *description = view_describe(view);
 			if (!description) {
@@ -454,7 +216,7 @@ static void message_dump_views(struct wl_client *client, struct wl_resource *res
 		}
 
 		size_t idx = 0;
-		struct view *view;
+		struct ptychite_view *view;
 		wl_list_for_each(view, &server->views, server_link) {
 			struct json_object *description = view_describe(view);
 			if (!description) {
@@ -503,53 +265,21 @@ static void message_handle_bind(struct wl_client *client, void *data, uint32_t v
 	wl_resource_set_implementation(resource, &ptychite_message_impl, data, message_handle_server_destroy);
 }
 
-static struct view *element_get_view(struct element *element) {
-	assert(element->type == ELEMENT_VIEW);
+static struct ptychite_view *element_get_view(struct ptychite_element *element) {
+	assert(element->type == PTYCHITE_ELEMENT_VIEW);
 
-	struct view *view = wl_container_of(element, view, element);
+	struct ptychite_view *view = wl_container_of(element, view, element);
 
 	return view;
 }
 
-static struct window *element_get_window(struct element *element) {
-	assert(element->type == ELEMENT_WINDOW);
+static struct ptychite_window *element_get_window(struct ptychite_element *element) {
+	assert(element->type == PTYCHITE_ELEMENT_WINDOW);
 
-	struct window *window = wl_container_of(element, window, element);
+	struct ptychite_window *window = wl_container_of(element, window, element);
 
 	return window;
 }
-
-static void buffer_destroy(struct wlr_buffer *buffer) {
-	struct buffer *p_buffer = wl_container_of(buffer, p_buffer, base);
-
-	cairo_surface_destroy(p_buffer->surface);
-	cairo_destroy(p_buffer->cairo);
-	free(p_buffer);
-}
-
-static bool buffer_begin_data_ptr_access(
-		struct wlr_buffer *buffer, uint32_t flags, void **data, uint32_t *format, size_t *stride) {
-	struct buffer *p_buffer = wl_container_of(buffer, p_buffer, base);
-
-	if (flags & WLR_BUFFER_DATA_PTR_ACCESS_WRITE) {
-		return false;
-	}
-
-	*data = cairo_image_surface_get_data(p_buffer->surface);
-	*stride = cairo_image_surface_get_stride(p_buffer->surface);
-	*format = DRM_FORMAT_ARGB8888;
-
-	return true;
-}
-
-static void buffer_end_data_ptr_access(struct wlr_buffer *buffer) {
-}
-
-static const struct wlr_buffer_impl buffer_buffer_impl = {
-		.destroy = buffer_destroy,
-		.begin_data_ptr_access = buffer_begin_data_ptr_access,
-		.end_data_ptr_access = buffer_end_data_ptr_access,
-};
 
 static void cairo_draw_rounded_rect(
 		cairo_t *cairo, double x, double y, double width, double height, double corner_radius) {
@@ -712,7 +442,7 @@ static int cairo_draw_text_right(cairo_t *cairo, int y, int right_x, int *x_out,
 }
 
 /* returns whether a change has been made */
-static bool mouse_region_update_state(struct mouse_region *region, double x, double y) {
+static bool mouse_region_update_state(struct ptychite_mouse_region *region, double x, double y) {
 	if (wlr_box_contains_point(&region->box, x, y)) {
 		if (region->entered) {
 			return false;
@@ -728,220 +458,9 @@ static bool mouse_region_update_state(struct mouse_region *region, double x, dou
 	return false;
 }
 
-static void window_handle_destroy(struct wl_listener *listener, void *data) {
-	struct window *window = wl_container_of(listener, window, destroy);
 
-	wl_list_remove(&window->destroy.link);
-
-	if (window->server->hovered_window == window) {
-		window->server->hovered_window = NULL;
-	}
-
-	window->impl->destroy(window);
-}
-
-static int window_init(struct window *window, struct ptychite_server *server, const struct window_impl *impl,
-		struct wlr_scene_tree *parent, struct wlr_output *output) {
-	if (!(window->element.scene_tree = wlr_scene_tree_create(parent))) {
-		return -1;
-	}
-
-	struct wlr_scene_buffer *scene_buffer = wlr_scene_buffer_create(window->element.scene_tree, NULL);
-	if (!scene_buffer) {
-		wlr_scene_node_destroy(&window->element.scene_tree->node);
-		return -1;
-	}
-
-	window->element.type = ELEMENT_WINDOW;
-	window->element.scene_tree->node.data = &window->element;
-	window->scene_buffer = scene_buffer;
-	window->server = server;
-	window->impl = impl;
-	window->output = output;
-
-	window->destroy.notify = window_handle_destroy;
-	wl_signal_add(&scene_buffer->node.events.destroy, &window->destroy);
-
-	return 0;
-}
-
-static int window_relay_draw(struct window *window, int width, int height) {
-	if (!window->impl || !window->impl->draw) {
-		return -1;
-	}
-
-	float scale;
-	if (window->output) {
-		scale = window->output->scale;
-	} else {
-		scale = 1.0;
-	}
-	int scaled_width = ceil(width * scale);
-	int scaled_height = ceil(height * scale);
-
-	cairo_surface_t *surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, scaled_width, scaled_height);
-	if (!surface) {
-		return -1;
-	}
-	if (cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS) {
-		goto err_create_cairo;
-	}
-
-	cairo_t *cairo = cairo_create(surface);
-	if (!cairo) {
-		goto err_create_cairo;
-	}
-	cairo_set_antialias(cairo, CAIRO_ANTIALIAS_BEST);
-
-	cairo_font_options_t *font_options = cairo_font_options_create();
-	if (!font_options) {
-		goto err_create_font_options;
-	}
-	cairo_font_options_set_hint_style(font_options, CAIRO_HINT_STYLE_FULL);
-	cairo_font_options_set_antialias(font_options, CAIRO_ANTIALIAS_GRAY);
-	cairo_set_font_options(cairo, font_options);
-
-	PangoContext *pango = pango_cairo_create_context(cairo);
-	if (!pango) {
-		goto err_create_pango;
-	}
-
-	struct buffer *buffer = calloc(1, sizeof(struct buffer));
-	if (!buffer) {
-		goto err_rest;
-	}
-
-	window->element.width = width;
-	window->element.height = height;
-	window->impl->draw(window, cairo, scaled_width, scaled_height, scale);
-	cairo_surface_flush(surface);
-
-	buffer->cairo = cairo;
-	buffer->surface = surface;
-	wlr_buffer_init(&buffer->base, &buffer_buffer_impl, scaled_width, scaled_height);
-
-	wlr_scene_buffer_set_dest_size(window->scene_buffer, width, height);
-	wlr_scene_buffer_set_buffer(window->scene_buffer, &buffer->base);
-	wlr_buffer_drop(&buffer->base);
-
-	return 0;
-
-err_rest:
-	g_object_unref(pango);
-err_create_pango:
-	cairo_font_options_destroy(font_options);
-err_create_font_options:
-	cairo_destroy(cairo);
-err_create_cairo:
-	cairo_surface_destroy(surface);
-	return -1;
-}
-
-static void window_relay_draw_same_size(struct window *window) {
-	window_relay_draw(window, window->element.width, window->element.height);
-}
-
-static void window_relay_pointer_enter(struct window *window) {
-	if (!window->impl || !window->impl->handle_pointer_enter) {
-		return;
-	}
-
-	window->impl->handle_pointer_enter(window);
-}
-
-static void window_relay_pointer_leave(struct window *window) {
-	if (!window->impl || !window->impl->handle_pointer_leave) {
-		return;
-	}
-
-	window->impl->handle_pointer_leave(window);
-}
-
-static void window_relay_pointer_move(struct window *window, double x, double y) {
-	if (!window->impl || !window->impl->handle_pointer_move) {
-		return;
-	}
-
-	float scale = window->output->scale;
-	double scale_x = scale * x;
-	double scale_y = scale * y;
-
-	window->impl->handle_pointer_move(window, scale_x, scale_y);
-}
-
-static void window_relay_pointer_button(
-		struct window *window, double x, double y, struct wlr_pointer_button_event *event) {
-	if (!window->impl || !window->impl->handle_pointer_button) {
-		return;
-	}
-
-	float scale = window->output->scale;
-	double scale_x = scale * x;
-	double scale_y = scale * y;
-
-	window->impl->handle_pointer_button(window, scale_x, scale_y, event);
-}
-
-static void wallpaper_draw(struct window *window, cairo_t *cairo, int surface_width, int surface_height, float scale) {
-	struct panel *wallpaper = wl_container_of(window, wallpaper, base);
-	struct ptychite_config *config = wallpaper->monitor->server->compositor->config;
-
-	if (!config->monitors.wallpaper.surface) {
-		cairo_set_source_rgba(cairo, 0.2, 0.2, 0.3, 1.0);
-		cairo_rectangle(cairo, 0, 0, surface_width, surface_height);
-		cairo_fill(cairo);
-		return;
-	}
-
-	cairo_surface_t *image_surface = config->monitors.wallpaper.surface;
-	double image_width = cairo_image_surface_get_width(image_surface);
-	double image_height = cairo_image_surface_get_height(image_surface);
-
-	switch (config->monitors.wallpaper.mode) {
-	case PTYCHITE_WALLPAPER_FIT: {
-		cairo_rectangle(cairo, 0, 0, surface_width, surface_height);
-		cairo_clip(cairo);
-		double width_ratio = (double)surface_width / image_width;
-		if (width_ratio * image_height >= surface_height) {
-			cairo_scale(cairo, width_ratio, width_ratio);
-		} else {
-			double height_ratio = (double)surface_height / image_height;
-			cairo_translate(cairo, -(image_width * height_ratio - (double)surface_width) / 2, 0);
-			cairo_scale(cairo, height_ratio, height_ratio);
-		}
-		break;
-	}
-	case PTYCHITE_WALLPAPER_STRETCH:
-		cairo_scale(cairo, (double)surface_width / image_width, (double)surface_height / image_height);
-		break;
-	}
-
-	cairo_set_source_surface(cairo, image_surface, 0, 0);
-	cairo_paint(cairo);
-	cairo_restore(cairo);
-}
-
-static void wallpaper_destroy(struct window *window) {
-	struct wallpaper *wallpaper = wl_container_of(window, wallpaper, base);
-
-	free(wallpaper);
-}
-
-static const struct window_impl wallpaper_window_impl = {
-		.draw = wallpaper_draw,
-		.handle_pointer_enter = NULL,
-		.handle_pointer_leave = NULL,
-		.handle_pointer_move = NULL,
-		.handle_pointer_button = NULL,
-		.destroy = wallpaper_destroy,
-};
-
-static void wallpaper_draw_auto(struct wallpaper *wallpaper) {
-	window_relay_draw(&wallpaper->base, wallpaper->monitor->geometry.width, wallpaper->monitor->geometry.height);
-}
-
-static void control_draw(struct window *window, cairo_t *cairo, int surface_width, int surface_height, float scale) {
-	struct control *control = wl_container_of(window, control, base);
+static void control_draw(struct ptychite_window *window, cairo_t *cairo, int surface_width, int surface_height, float scale) {
+	struct ptychite_control *control = wl_container_of(window, control, base);
 
 	struct wlr_box box = {
 			.x = 2,
@@ -999,20 +518,20 @@ static void control_draw(struct window *window, cairo_t *cairo, int surface_widt
 	}
 }
 
-static void control_handle_pointer_move(struct window *window, double x, double y) {
+static void control_handle_pointer_move(struct ptychite_window *window, double x, double y) {
 }
 
 static void control_handle_pointer_button(
-		struct window *window, double x, double y, struct wlr_pointer_button_event *event) {
+		struct ptychite_window *window, double x, double y, struct wlr_pointer_button_event *event) {
 }
 
-static void control_destroy(struct window *window) {
-	struct control *control = wl_container_of(window, control, base);
+static void control_destroy(struct ptychite_window *window) {
+	struct ptychite_control *control = wl_container_of(window, control, base);
 
 	free(control);
 }
 
-static const struct window_impl control_window_impl = {
+static const struct ptychite_window_impl control_window_impl = {
 		.draw = control_draw,
 		.handle_pointer_enter = NULL,
 		.handle_pointer_leave = NULL,
@@ -1021,8 +540,8 @@ static const struct window_impl control_window_impl = {
 		.destroy = control_destroy,
 };
 
-static void control_draw_auto(struct control *control) {
-	struct monitor *monitor = control->base.server->active_monitor;
+static void control_draw_auto(struct ptychite_control *control) {
+	struct ptychite_monitor *monitor = control->base.server->active_monitor;
 
 	if (!monitor) {
 		return;
@@ -1043,25 +562,25 @@ static void control_draw_auto(struct control *control) {
 	window_relay_draw(&control->base, width, height);
 }
 
-static void control_show(struct control *control) {
+static void control_show(struct ptychite_control *control) {
 	control_draw_auto(control);
 	wlr_scene_node_set_enabled(&control->base.element.scene_tree->node, true);
-	struct monitor *monitor = control->base.server->active_monitor;
+	struct ptychite_monitor *monitor = control->base.server->active_monitor;
 	if (monitor && monitor->panel && monitor->panel->base.element.scene_tree->node.enabled) {
 		window_relay_draw_same_size(&monitor->panel->base);
 	}
 }
 
-static void control_hide(struct control *control) {
+static void control_hide(struct ptychite_control *control) {
 	wlr_scene_node_set_enabled(&control->base.element.scene_tree->node, false);
-	struct monitor *monitor = control->base.server->active_monitor;
+	struct ptychite_monitor *monitor = control->base.server->active_monitor;
 	if (monitor && monitor->panel && monitor->panel->base.element.scene_tree->node.enabled) {
 		window_relay_draw_same_size(&monitor->panel->base);
 	}
 }
 
 static void keyboard_handle_key(struct wl_listener *listener, void *data) {
-	struct keyboard *keyboard = wl_container_of(listener, keyboard, key);
+	struct ptychite_keyboard *keyboard = wl_container_of(listener, keyboard, key);
 	struct wlr_keyboard_key_event *event = data;
 	struct ptychite_server *server = keyboard->server;
 	struct wlr_seat *seat = server->seat;
@@ -1192,7 +711,7 @@ static void keyboard_handle_key(struct wl_listener *listener, void *data) {
 		}
 
 		if (server->keys.size != old_keys_size) {
-			struct monitor *monitor;
+			struct ptychite_monitor *monitor;
 			wl_list_for_each(monitor, &server->monitors, link) {
 				if (monitor->panel && monitor->panel->base.element.scene_tree->node.enabled) {
 					window_relay_draw_same_size(&monitor->panel->base);
@@ -1208,7 +727,7 @@ static void keyboard_handle_key(struct wl_listener *listener, void *data) {
 }
 
 static void keyboard_handle_destroy(struct wl_listener *listener, void *data) {
-	struct keyboard *keyboard = wl_container_of(listener, keyboard, destroy);
+	struct ptychite_keyboard *keyboard = wl_container_of(listener, keyboard, destroy);
 
 	wl_list_remove(&keyboard->modifiers.link);
 	wl_list_remove(&keyboard->key.link);
@@ -1219,13 +738,13 @@ static void keyboard_handle_destroy(struct wl_listener *listener, void *data) {
 }
 
 static void keyboard_handle_modifiers(struct wl_listener *listener, void *data) {
-	struct keyboard *keyboard = wl_container_of(listener, keyboard, modifiers);
+	struct ptychite_keyboard *keyboard = wl_container_of(listener, keyboard, modifiers);
 
 	wlr_seat_set_keyboard(keyboard->server->seat, keyboard->keyboard);
 	wlr_seat_keyboard_notify_modifiers(keyboard->server->seat, &keyboard->keyboard->modifiers);
 }
 
-static void view_resize(struct view *view, int width, int height) {
+static void view_resize(struct ptychite_view *view, int width, int height) {
 	view->element.width = width;
 	view->element.height = height;
 
@@ -1293,9 +812,9 @@ static void surface_unfocus(struct wlr_surface *surface) {
 	wlr_xdg_toplevel_set_activated(xdg_surface->toplevel, false);
 
 	struct wlr_scene_tree *scene_tree = xdg_surface->data;
-	struct element *element = scene_tree->node.data;
+	struct ptychite_element *element = scene_tree->node.data;
 	if (element) {
-		struct view *view = element_get_view(element);
+		struct ptychite_view *view = element_get_view(element);
 		struct ptychite_config *config = view->server->compositor->config;
 		view->focused = false;
 		wlr_scene_rect_set_color(view->border.top, config->views.border.colors.inactive);
@@ -1308,7 +827,7 @@ static void surface_unfocus(struct wlr_surface *surface) {
 	}
 }
 
-static void view_focus(struct view *view, struct wlr_surface *surface) {
+static void view_focus(struct ptychite_view *view, struct wlr_surface *surface) {
 	struct ptychite_server *server = view->server;
 	struct wlr_seat *seat = server->seat;
 	struct wlr_surface *prev_surface = seat->keyboard_state.focused_surface;
@@ -1346,8 +865,8 @@ static void view_focus(struct view *view, struct wlr_surface *surface) {
 	}
 }
 
-static struct workspace *monitor_add_workspace(struct monitor *monitor) {
-	struct workspace *workspace = calloc(1, sizeof(struct workspace));
+static struct ptychite_workspace *monitor_add_workspace(struct ptychite_monitor *monitor) {
+	struct ptychite_workspace *workspace = calloc(1, sizeof(struct ptychite_workspace));
 	if (!workspace) {
 		return NULL;
 	}
@@ -1363,8 +882,8 @@ static struct workspace *monitor_add_workspace(struct monitor *monitor) {
 	return workspace;
 }
 
-static void monitor_tile(struct monitor *monitor) {
-	struct workspace *workspace = monitor->current_workspace;
+static void monitor_tile(struct ptychite_monitor *monitor) {
+	struct ptychite_workspace *workspace = monitor->current_workspace;
 	if (wl_list_empty(&workspace->views_order)) {
 		return;
 	}
@@ -1394,7 +913,7 @@ static void monitor_tile(struct monitor *monitor) {
 		int master_y = gaps;
 		int stack_y = gaps;
 		int i = 0;
-		struct view *view;
+		struct ptychite_view *view;
 		wl_list_for_each(view, &workspace->views_order, workspace_order_link) {
 			if (i < views_in_master) {
 				int r = fmin(views_len, views_in_master) - i;
@@ -1421,10 +940,10 @@ static void monitor_tile(struct monitor *monitor) {
 	ptychite_server_check_cursor(monitor->server);
 }
 
-static void monitor_fix_workspaces(struct monitor *monitor) {
-	struct workspace *end_workspace = wl_container_of(monitor->workspaces.prev, end_workspace, link);
+static void monitor_fix_workspaces(struct ptychite_monitor *monitor) {
+	struct ptychite_workspace *end_workspace = wl_container_of(monitor->workspaces.prev, end_workspace, link);
 
-	struct workspace *workspace, *workspace_tmp;
+	struct ptychite_workspace *workspace, *workspace_tmp;
 	wl_list_for_each_safe(workspace, workspace_tmp, &monitor->workspaces, link) {
 		if (workspace == end_workspace) {
 			break;
@@ -1439,11 +958,11 @@ static void monitor_fix_workspaces(struct monitor *monitor) {
 	}
 }
 
-static void monitor_switch_workspace(struct monitor *monitor, struct workspace *workspace) {
-	struct workspace *last_workspace = monitor->current_workspace;
+static void monitor_switch_workspace(struct ptychite_monitor *monitor, struct ptychite_workspace *workspace) {
+	struct ptychite_workspace *last_workspace = monitor->current_workspace;
 	monitor->current_workspace = workspace;
 
-	struct view *view;
+	struct ptychite_view *view;
 	wl_list_for_each(view, &last_workspace->views_order, workspace_order_link) {
 		wlr_scene_node_set_enabled(&view->element.scene_tree->node, false);
 	}
@@ -1463,7 +982,7 @@ static void monitor_switch_workspace(struct monitor *monitor, struct workspace *
 			wlr_seat_keyboard_notify_clear_focus(monitor->server->seat);
 		}
 	} else {
-		struct view *new_view =
+		struct ptychite_view *new_view =
 				wl_container_of(monitor->current_workspace->views_focus.next, new_view, workspace_focus_link);
 		view_focus(new_view, new_view->xdg_toplevel->base->surface);
 	}
@@ -1471,12 +990,12 @@ static void monitor_switch_workspace(struct monitor *monitor, struct workspace *
 	ptychite_server_check_cursor(monitor->server);
 }
 
-static void monitor_disable(struct monitor *monitor) {
+static void monitor_disable(struct ptychite_monitor *monitor) {
 	struct ptychite_server *server = monitor->server;
 
 	if (monitor == server->active_monitor) {
 		server->active_monitor = NULL;
-		struct monitor *iter;
+		struct ptychite_monitor *iter;
 		wl_list_for_each(iter, &server->monitors, link) {
 			if (iter->output->enabled) {
 				server->active_monitor = iter;
@@ -1486,11 +1005,11 @@ static void monitor_disable(struct monitor *monitor) {
 	}
 
 	if (server->active_monitor) {
-		struct workspace *end_workspace = wl_container_of(monitor->workspaces.prev, end_workspace, link);
+		struct ptychite_workspace *end_workspace = wl_container_of(monitor->workspaces.prev, end_workspace, link);
 		wl_list_init(&end_workspace->views_order);
 		wl_list_init(&end_workspace->views_focus);
 
-		struct workspace *workspace;
+		struct ptychite_workspace *workspace;
 		wl_list_for_each(workspace, &monitor->workspaces, link) {
 			if (workspace == end_workspace) {
 				break;
@@ -1499,7 +1018,7 @@ static void monitor_disable(struct monitor *monitor) {
 			free(workspace);
 		}
 
-		struct view *view, *view_tmp;
+		struct ptychite_view *view, *view_tmp;
 		wl_list_for_each_safe(view, view_tmp, &monitor->views, monitor_link) {
 			wl_list_insert(&server->active_monitor->views, &view->monitor_link);
 			wl_list_insert(&server->active_monitor->current_workspace->views_order, &view->workspace_order_link);
@@ -1512,13 +1031,13 @@ static void monitor_disable(struct monitor *monitor) {
 }
 
 static void monitor_handle_frame(struct wl_listener *listener, void *data) {
-	struct monitor *monitor = wl_container_of(listener, monitor, frame);
+	struct ptychite_monitor *monitor = wl_container_of(listener, monitor, frame);
 
 	struct wlr_scene_output *scene_output = wlr_scene_get_scene_output(monitor->server->scene, monitor->output);
 
-	struct monitor *monitor_iter;
+	struct ptychite_monitor *monitor_iter;
 	wl_list_for_each(monitor_iter, &monitor->server->monitors, link) {
-		struct view *view;
+		struct ptychite_view *view;
 		wl_list_for_each(view, &monitor_iter->current_workspace->views_order, workspace_order_link) {
 			if (!view->resize_serial || view == monitor->server->grabbed_view ||
 					!view->element.scene_tree->node.enabled) {
@@ -1543,14 +1062,14 @@ skip:
 }
 
 static void monitor_handle_request_state(struct wl_listener *listener, void *data) {
-	struct monitor *monitor = wl_container_of(listener, monitor, request_state);
+	struct ptychite_monitor *monitor = wl_container_of(listener, monitor, request_state);
 	const struct wlr_output_event_request_state *event = data;
 
 	wlr_output_commit_state(monitor->output, event->state);
 }
 
 static void monitor_handle_destroy(struct wl_listener *listener, void *data) {
-	struct monitor *monitor = wl_container_of(listener, monitor, destroy);
+	struct ptychite_monitor *monitor = wl_container_of(listener, monitor, destroy);
 
 	wl_list_remove(&monitor->frame.link);
 	wl_list_remove(&monitor->request_state.link);
@@ -1567,7 +1086,7 @@ static void monitor_handle_destroy(struct wl_listener *listener, void *data) {
 	}
 
 	monitor_disable(monitor);
-	struct workspace *workspace;
+	struct ptychite_workspace *workspace;
 	wl_list_for_each(workspace, &monitor->workspaces, link) {
 		free(workspace);
 	}
@@ -1810,8 +1329,8 @@ static const uint32_t ptychite_svg[] = {
 		171861878,
 };
 
-static void panel_draw(struct window *window, cairo_t *cairo, int surface_width, int surface_height, float scale) {
-	struct panel *panel = wl_container_of(window, panel, base);
+static void panel_draw(struct ptychite_window *window, cairo_t *cairo, int surface_width, int surface_height, float scale) {
+	struct ptychite_panel *panel = wl_container_of(window, panel, base);
 
 	struct ptychite_server *server = panel->monitor->server;
 	struct ptychite_config *config = server->compositor->config;
@@ -1862,7 +1381,7 @@ static void panel_draw(struct window *window, cairo_t *cairo, int surface_width,
 		g_error_free(error);
 	}
 
-	struct workspace *workspace;
+	struct ptychite_workspace *workspace;
 	wl_list_for_each(workspace, &panel->monitor->workspaces, link) {
 		workspace->region.box = (struct wlr_box){
 				.x = x - font_height / 2,
@@ -1917,11 +1436,11 @@ static void panel_draw(struct window *window, cairo_t *cairo, int surface_width,
 	}
 }
 
-static void panel_handle_pointer_enter(struct window *window) {
+static void panel_handle_pointer_enter(struct ptychite_window *window) {
 }
 
-static void panel_handle_pointer_leave(struct window *window) {
-	struct panel *panel = wl_container_of(window, panel, base);
+static void panel_handle_pointer_leave(struct ptychite_window *window) {
+	struct ptychite_panel *panel = wl_container_of(window, panel, base);
 	bool redraw = false;
 
 	redraw |= panel->regions.time.entered;
@@ -1929,7 +1448,7 @@ static void panel_handle_pointer_leave(struct window *window) {
 	redraw |= panel->regions.shell.entered;
 	panel->regions.shell.entered = false;
 
-	struct workspace *workspace;
+	struct ptychite_workspace *workspace;
 	wl_list_for_each(workspace, &panel->monitor->workspaces, link) {
 		redraw |= workspace->region.entered;
 		workspace->region.entered = false;
@@ -1940,14 +1459,14 @@ static void panel_handle_pointer_leave(struct window *window) {
 	}
 }
 
-static void panel_handle_pointer_move(struct window *window, double x, double y) {
-	struct panel *panel = wl_container_of(window, panel, base);
+static void panel_handle_pointer_move(struct ptychite_window *window, double x, double y) {
+	struct ptychite_panel *panel = wl_container_of(window, panel, base);
 
 	bool redraw = false;
 	redraw |= mouse_region_update_state(&panel->regions.shell, x, y);
 	redraw |= mouse_region_update_state(&panel->regions.time, x, y);
 
-	struct workspace *workspace;
+	struct ptychite_workspace *workspace;
 	wl_list_for_each(workspace, &panel->monitor->workspaces, link) {
 		redraw |= mouse_region_update_state(&workspace->region, x, y);
 	}
@@ -1958,8 +1477,8 @@ static void panel_handle_pointer_move(struct window *window, double x, double y)
 }
 
 static void panel_handle_pointer_button(
-		struct window *window, double x, double y, struct wlr_pointer_button_event *event) {
-	struct panel *panel = wl_container_of(window, panel, base);
+		struct ptychite_window *window, double x, double y, struct wlr_pointer_button_event *event) {
+	struct ptychite_panel *panel = wl_container_of(window, panel, base);
 
 	if (event->state != WLR_BUTTON_PRESSED) {
 		return;
@@ -1976,7 +1495,7 @@ static void panel_handle_pointer_button(
 		}
 	}
 
-	struct workspace *workspace;
+	struct ptychite_workspace *workspace;
 	wl_list_for_each(workspace, &panel->monitor->workspaces, link) {
 		if (workspace->region.entered) {
 			if (workspace != panel->monitor->current_workspace) {
@@ -1987,13 +1506,13 @@ static void panel_handle_pointer_button(
 	}
 }
 
-static void panel_destroy(struct window *window) {
-	struct panel *panel = wl_container_of(window, panel, base);
+static void panel_destroy(struct ptychite_window *window) {
+	struct ptychite_panel *panel = wl_container_of(window, panel, base);
 
 	free(panel);
 }
 
-static const struct window_impl panel_window_impl = {
+static const struct ptychite_window_impl panel_window_impl = {
 		.draw = panel_draw,
 		.handle_pointer_enter = panel_handle_pointer_enter,
 		.handle_pointer_leave = panel_handle_pointer_leave,
@@ -2002,7 +1521,7 @@ static const struct window_impl panel_window_impl = {
 		.destroy = panel_destroy,
 };
 
-static void panel_draw_auto(struct panel *panel) {
+static void panel_draw_auto(struct ptychite_panel *panel) {
 	struct ptychite_font *font = &panel->monitor->server->compositor->config->panel.font;
 	int height = font->height + font->height / 2;
 
@@ -2012,7 +1531,7 @@ static void panel_draw_auto(struct panel *panel) {
 	window_relay_draw(&panel->base, panel->monitor->geometry.width, height);
 }
 
-static void view_begin_interactive(struct view *view, enum cursor_mode mode) {
+static void view_begin_interactive(struct ptychite_view *view, enum ptychite_cursor_mode mode) {
 	struct ptychite_server *server = view->server;
 	struct wlr_surface *focused_surface = server->seat->pointer_state.focused_surface;
 
@@ -2022,7 +1541,7 @@ static void view_begin_interactive(struct view *view, enum cursor_mode mode) {
 	server->grabbed_view = view;
 	server->cursor_mode = mode;
 
-	if (mode == CURSOR_MOVE) {
+	if (mode == PTYCHITE_CURSOR_MOVE) {
 		server->grab_x = server->cursor->x - view->element.scene_tree->node.x;
 		server->grab_y = server->cursor->y - view->element.scene_tree->node.y;
 		wlr_cursor_set_xcursor(server->cursor, server->cursor_mgr, "fleur");
@@ -2036,7 +1555,7 @@ static void view_begin_interactive(struct view *view, enum cursor_mode mode) {
 }
 
 static void view_handle_commit(struct wl_listener *listener, void *data) {
-	struct view *view = wl_container_of(listener, view, commit);
+	struct ptychite_view *view = wl_container_of(listener, view, commit);
 
 	if (view->resize_serial && view->resize_serial <= view->xdg_toplevel->base->current.configure_serial) {
 		view->resize_serial = 0;
@@ -2044,7 +1563,7 @@ static void view_handle_commit(struct wl_listener *listener, void *data) {
 }
 
 static void view_handle_set_title(struct wl_listener *listener, void *data) {
-	struct view *view = wl_container_of(listener, view, set_title);
+	struct ptychite_view *view = wl_container_of(listener, view, set_title);
 
 	if (view->title_bar && view->title_bar->base.element.scene_tree->node.enabled) {
 		window_relay_draw_same_size(&view->title_bar->base);
@@ -2052,7 +1571,7 @@ static void view_handle_set_title(struct wl_listener *listener, void *data) {
 }
 
 static void view_handle_map(struct wl_listener *listener, void *data) {
-	struct view *view = wl_container_of(listener, view, map);
+	struct ptychite_view *view = wl_container_of(listener, view, map);
 	struct ptychite_config *config = view->server->compositor->config;
 
 	wl_list_insert(&view->server->views, &view->server_link);
@@ -2065,7 +1584,7 @@ static void view_handle_map(struct wl_listener *listener, void *data) {
 				&view->workspace_order_link);
 		wl_list_insert(&view->workspace->views_focus, &view->workspace_focus_link);
 
-		struct workspace *end_workspace = wl_container_of(view->monitor->workspaces.prev, end_workspace, link);
+		struct ptychite_workspace *end_workspace = wl_container_of(view->monitor->workspaces.prev, end_workspace, link);
 		if (view->workspace == end_workspace && monitor_add_workspace(view->monitor) && view->monitor->panel &&
 				view->monitor->panel->base.scene_buffer->node.enabled) {
 			window_relay_draw_same_size(&view->monitor->panel->base);
@@ -2101,10 +1620,10 @@ static void view_handle_map(struct wl_listener *listener, void *data) {
 }
 
 static void view_handle_unmap(struct wl_listener *listener, void *data) {
-	struct view *view = wl_container_of(listener, view, unmap);
+	struct ptychite_view *view = wl_container_of(listener, view, unmap);
 
 	if (view == view->server->grabbed_view) {
-		view->server->cursor_mode = CURSOR_PASSTHROUGH;
+		view->server->cursor_mode = PTYCHITE_CURSOR_PASSTHROUGH;
 		view->server->grabbed_view = NULL;
 	}
 
@@ -2119,7 +1638,7 @@ static void view_handle_unmap(struct wl_listener *listener, void *data) {
 	if (view->monitor) {
 		monitor_tile(view->monitor);
 		if (view->focused && !wl_list_empty(&view->monitor->current_workspace->views_order)) {
-			struct view *new_view =
+			struct ptychite_view *new_view =
 					wl_container_of(view->monitor->current_workspace->views_focus.next, new_view, workspace_focus_link);
 			view_focus(new_view, new_view->xdg_toplevel->base->surface);
 		}
@@ -2127,7 +1646,7 @@ static void view_handle_unmap(struct wl_listener *listener, void *data) {
 }
 
 static void view_handle_destroy(struct wl_listener *listener, void *data) {
-	struct view *view = wl_container_of(listener, view, destroy);
+	struct ptychite_view *view = wl_container_of(listener, view, destroy);
 
 	wl_list_remove(&view->map.link);
 	wl_list_remove(&view->unmap.link);
@@ -2141,19 +1660,19 @@ static void view_handle_destroy(struct wl_listener *listener, void *data) {
 }
 
 static void view_handle_request_maximize(struct wl_listener *listener, void *data) {
-	struct view *view = wl_container_of(listener, view, request_maximize);
+	struct ptychite_view *view = wl_container_of(listener, view, request_maximize);
 
 	wlr_xdg_surface_schedule_configure(view->xdg_toplevel->base);
 }
 
 static void view_handle_request_fullscreen(struct wl_listener *listener, void *data) {
-	struct view *view = wl_container_of(listener, view, request_fullscreen);
+	struct ptychite_view *view = wl_container_of(listener, view, request_fullscreen);
 
 	wlr_xdg_surface_schedule_configure(view->xdg_toplevel->base);
 }
 
-static void title_bar_draw(struct window *window, cairo_t *cairo, int surface_width, int surface_height, float scale) {
-	struct title_bar *title_bar = wl_container_of(window, title_bar, base);
+static void title_bar_draw(struct ptychite_window *window, cairo_t *cairo, int surface_width, int surface_height, float scale) {
+	struct ptychite_title_bar *title_bar = wl_container_of(window, title_bar, base);
 
 	struct ptychite_server *server = title_bar->view->server;
 	struct ptychite_config *config = server->compositor->config;
@@ -2213,11 +1732,11 @@ static void title_bar_draw(struct window *window, cairo_t *cairo, int surface_wi
 	cairo_stroke(cairo);
 }
 
-static void title_bar_handle_pointer_enter(struct window *window) {
+static void title_bar_handle_pointer_enter(struct ptychite_window *window) {
 }
 
-static void title_bar_handle_pointer_leave(struct window *window) {
-	struct title_bar *title_bar = wl_container_of(window, title_bar, base);
+static void title_bar_handle_pointer_leave(struct ptychite_window *window) {
+	struct ptychite_title_bar *title_bar = wl_container_of(window, title_bar, base);
 
 	bool redraw = false;
 	redraw |= title_bar->regions.hide.entered;
@@ -2230,8 +1749,8 @@ static void title_bar_handle_pointer_leave(struct window *window) {
 	}
 }
 
-static void title_bar_handle_pointer_move(struct window *window, double x, double y) {
-	struct title_bar *title_bar = wl_container_of(window, title_bar, base);
+static void title_bar_handle_pointer_move(struct ptychite_window *window, double x, double y) {
+	struct ptychite_title_bar *title_bar = wl_container_of(window, title_bar, base);
 
 	bool redraw = false;
 	redraw |= mouse_region_update_state(&title_bar->regions.hide, x, y);
@@ -2243,8 +1762,8 @@ static void title_bar_handle_pointer_move(struct window *window, double x, doubl
 }
 
 static void title_bar_handle_pointer_button(
-		struct window *window, double x, double y, struct wlr_pointer_button_event *event) {
-	struct title_bar *title_bar = wl_container_of(window, title_bar, base);
+		struct ptychite_window *window, double x, double y, struct wlr_pointer_button_event *event) {
+	struct ptychite_title_bar *title_bar = wl_container_of(window, title_bar, base);
 
 	if (event->state != WLR_BUTTON_PRESSED) {
 		return;
@@ -2256,16 +1775,16 @@ static void title_bar_handle_pointer_button(
 	}
 
 	view_focus(title_bar->view, title_bar->view->xdg_toplevel->base->surface);
-	view_begin_interactive(title_bar->view, CURSOR_MOVE);
+	view_begin_interactive(title_bar->view, PTYCHITE_CURSOR_MOVE);
 }
 
-static void title_bar_destroy(struct window *window) {
-	struct title_bar *title_bar = wl_container_of(window, title_bar, base);
+static void title_bar_destroy(struct ptychite_window *window) {
+	struct ptychite_title_bar *title_bar = wl_container_of(window, title_bar, base);
 
 	free(title_bar);
 }
 
-static const struct window_impl title_bar_window_impl = {
+static const struct ptychite_window_impl title_bar_window_impl = {
 		.draw = title_bar_draw,
 		.handle_pointer_enter = title_bar_handle_pointer_enter,
 		.handle_pointer_leave = title_bar_handle_pointer_leave,
@@ -2274,11 +1793,11 @@ static const struct window_impl title_bar_window_impl = {
 		.destroy = title_bar_destroy,
 };
 
-static void server_activate_monitor(struct ptychite_server *server, struct monitor *monitor) {
+static void server_activate_monitor(struct ptychite_server *server, struct ptychite_monitor *monitor) {
 	server->active_monitor = monitor;
 }
 
-static struct element *server_identify_element_at(struct ptychite_server *server, double lx, double ly, double *sx,
+static struct ptychite_element *server_identify_element_at(struct ptychite_server *server, double lx, double ly, double *sx,
 		double *sy, struct wlr_scene_buffer **scene_buffer) {
 	struct wlr_scene_node *scene_node = wlr_scene_node_at(&server->scene->tree.node, lx, ly, sx, sy);
 
@@ -2299,14 +1818,14 @@ static struct element *server_identify_element_at(struct ptychite_server *server
 }
 
 static void server_process_cursor_move(struct ptychite_server *server, uint32_t time) {
-	struct view *view = server->grabbed_view;
+	struct ptychite_view *view = server->grabbed_view;
 
 	wlr_scene_node_set_position(
 			&view->element.scene_tree->node, server->cursor->x - server->grab_x, server->cursor->y - server->grab_y);
 }
 
 static void server_process_cursor_resize(struct ptychite_server *server, uint32_t time) {
-	struct view *view = server->grabbed_view;
+	struct ptychite_view *view = server->grabbed_view;
 
 	double border_x = server->cursor->x - server->grab_x;
 	double border_y = server->cursor->y - server->grab_y;
@@ -2335,21 +1854,21 @@ static void server_process_cursor_motion(struct ptychite_server *server, uint32_
 		server_activate_monitor(server, output->data);
 	}
 
-	if (server->cursor_mode == CURSOR_MOVE) {
+	if (server->cursor_mode == PTYCHITE_CURSOR_MOVE) {
 		server_process_cursor_move(server, time);
 		return;
-	} else if (server->cursor_mode == CURSOR_RESIZE) {
+	} else if (server->cursor_mode == PTYCHITE_CURSOR_RESIZE) {
 		server_process_cursor_resize(server, time);
 		return;
 	}
 
 	double sx, sy;
 	struct wlr_scene_buffer *scene_buffer;
-	struct element *element =
+	struct ptychite_element *element =
 			server_identify_element_at(server, server->cursor->x, server->cursor->y, &sx, &sy, &scene_buffer);
 	if (element) {
 		switch (element->type) {
-		case ELEMENT_VIEW: {
+		case PTYCHITE_ELEMENT_VIEW: {
 			struct wlr_scene_surface *scene_surface = wlr_scene_surface_try_from_buffer(scene_buffer);
 			if (scene_surface) {
 				wlr_seat_pointer_notify_enter(server->seat, scene_surface->surface, sx, sy);
@@ -2363,8 +1882,8 @@ static void server_process_cursor_motion(struct ptychite_server *server, uint32_
 			}
 			break;
 		}
-		case ELEMENT_WINDOW: {
-			struct window *window = element_get_window(element);
+		case PTYCHITE_ELEMENT_WINDOW: {
+			struct ptychite_window *window = element_get_window(element);
 			if (window != server->hovered_window) {
 				if (server->hovered_window) {
 					window_relay_pointer_leave(server->hovered_window);
@@ -2393,7 +1912,7 @@ static void server_new_pointer(struct ptychite_server *server, struct wlr_input_
 }
 
 static void server_new_keyboard(struct ptychite_server *server, struct wlr_input_device *device) {
-	struct keyboard *p_keyboard = calloc(1, sizeof(struct keyboard));
+	struct ptychite_keyboard *p_keyboard = calloc(1, sizeof(struct ptychite_keyboard));
 	if (!p_keyboard) {
 		wlr_log(WLR_ERROR, "Could not initialize keyboard: insufficent memory");
 		return;
@@ -2446,7 +1965,7 @@ static int server_time_tick_update(void *data) {
 	if (info) {
 		if (!*server->panel_date || !info->tm_sec) {
 			strftime(server->panel_date, sizeof(server->panel_date), "%b %-d %-H:%M", info);
-			struct monitor *monitor;
+			struct ptychite_monitor *monitor;
 			wl_list_for_each(monitor, &server->monitors, link) {
 				if (!monitor->panel || !monitor->panel->base.element.scene_tree->node.enabled) {
 					continue;
@@ -2479,7 +1998,7 @@ static int server_time_tick_update(void *data) {
 static void server_update_monitors(struct ptychite_server *server) {
 	struct wlr_output_configuration_v1 *output_config = wlr_output_configuration_v1_create();
 
-	struct monitor *monitor;
+	struct ptychite_monitor *monitor;
 	wl_list_for_each(monitor, &server->monitors, link) {
 		if (monitor->output->enabled) {
 			continue;
@@ -2561,7 +2080,7 @@ static void server_apply_output_config(
 	struct wlr_output_configuration_head_v1 *head;
 	wl_list_for_each(head, &output_config->heads, link) {
 		struct wlr_output *output = head->state.output;
-		struct monitor *monitor = output->data;
+		struct ptychite_monitor *monitor = output->data;
 
 		wlr_output_enable(output, head->state.enabled);
 		if (head->state.enabled) {
@@ -2624,7 +2143,7 @@ static void server_handle_new_output(struct wl_listener *listener, void *data) {
 	struct ptychite_server *server = wl_container_of(listener, server, new_output);
 	struct wlr_output *output = data;
 
-	struct monitor *monitor = calloc(1, sizeof(struct monitor));
+	struct ptychite_monitor *monitor = calloc(1, sizeof(struct ptychite_monitor));
 	if (!monitor) {
 		wlr_log(WLR_ERROR, "Could not initialize output: insufficent memory");
 		return;
@@ -2674,7 +2193,7 @@ static void server_handle_new_output(struct wl_listener *listener, void *data) {
 		server->active_monitor = monitor;
 	}
 
-	if ((monitor->wallpaper = calloc(1, sizeof(struct wallpaper)))) {
+	if ((monitor->wallpaper = calloc(1, sizeof(struct ptychite_wallpaper)))) {
 		if (!window_init(&monitor->wallpaper->base, server, &wallpaper_window_impl, server->layers.bottom, output)) {
 			monitor->wallpaper->monitor = monitor;
 		} else {
@@ -2683,7 +2202,7 @@ static void server_handle_new_output(struct wl_listener *listener, void *data) {
 		}
 	}
 
-	if ((monitor->panel = calloc(1, sizeof(struct panel)))) {
+	if ((monitor->panel = calloc(1, sizeof(struct ptychite_panel)))) {
 		if (!window_init(&monitor->panel->base, server, &panel_window_impl, server->layers.bottom, output)) {
 			monitor->panel->monitor = monitor;
 		} else {
@@ -2711,13 +2230,13 @@ static void server_handle_new_xdg_surface(struct wl_listener *listener, void *da
 	}
 	assert(xdg_surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL);
 
-	struct view *view = calloc(1, sizeof(struct view));
+	struct ptychite_view *view = calloc(1, sizeof(struct ptychite_view));
 	if (!view) {
 		wlr_log(WLR_ERROR, "Could not initialize view: insufficent memory");
 		return;
 	}
 
-	view->element.type = ELEMENT_VIEW;
+	view->element.type = PTYCHITE_ELEMENT_VIEW;
 	view->server = server;
 	view->xdg_toplevel = xdg_surface->toplevel;
 	view->element.scene_tree = wlr_scene_tree_create(server->layers.tiled);
@@ -2734,7 +2253,7 @@ static void server_handle_new_xdg_surface(struct wl_listener *listener, void *da
 		(*borders[i])->node.data = view;
 	}
 
-	if ((view->title_bar = calloc(1, sizeof(struct title_bar)))) {
+	if ((view->title_bar = calloc(1, sizeof(struct ptychite_title_bar)))) {
 		if (!window_init(&view->title_bar->base, server, &title_bar_window_impl, view->element.scene_tree, NULL)) {
 			view->title_bar->view = view;
 			wlr_scene_node_set_enabled(&view->title_bar->base.element.scene_tree->node,
@@ -2793,8 +2312,8 @@ static void server_handle_cursor_button(struct wl_listener *listener, void *data
 	struct wlr_pointer_button_event *event = data;
 
 	if (event->state == WLR_BUTTON_RELEASED) {
-		if (server->cursor_mode != CURSOR_PASSTHROUGH) {
-			server->cursor_mode = CURSOR_PASSTHROUGH;
+		if (server->cursor_mode != PTYCHITE_CURSOR_PASSTHROUGH) {
+			server->cursor_mode = PTYCHITE_CURSOR_PASSTHROUGH;
 			server->grabbed_view = NULL;
 			wlr_cursor_set_xcursor(server->cursor, server->cursor_mgr, "left_ptr");
 		}
@@ -2802,13 +2321,13 @@ static void server_handle_cursor_button(struct wl_listener *listener, void *data
 
 	double sx, sy;
 	struct wlr_scene_buffer *scene_buffer;
-	struct element *element =
+	struct ptychite_element *element =
 			server_identify_element_at(server, server->cursor->x, server->cursor->y, &sx, &sy, &scene_buffer);
 	if (element) {
 		switch (element->type) {
-		case ELEMENT_VIEW:
+		case PTYCHITE_ELEMENT_VIEW:
 			if (event->state == WLR_BUTTON_PRESSED) {
-				struct view *view = element_get_view(element);
+				struct ptychite_view *view = element_get_view(element);
 				struct wlr_scene_surface *scene_surface = wlr_scene_surface_try_from_buffer(scene_buffer);
 				view_focus(view, scene_surface->surface);
 
@@ -2820,17 +2339,17 @@ static void server_handle_cursor_button(struct wl_listener *listener, void *data
 				uint32_t modifiers = wlr_keyboard_get_modifiers(keyboard);
 				if (modifiers == WLR_MODIFIER_LOGO) {
 					if (event->button == BTN_LEFT) {
-						view_begin_interactive(view, CURSOR_MOVE);
+						view_begin_interactive(view, PTYCHITE_CURSOR_MOVE);
 						return;
 					} else if (event->button == BTN_RIGHT) {
-						view_begin_interactive(view, CURSOR_RESIZE);
+						view_begin_interactive(view, PTYCHITE_CURSOR_RESIZE);
 						return;
 					}
 				}
 			}
 			break;
-		case ELEMENT_WINDOW: {
-			struct window *window = element_get_window(element);
+		case PTYCHITE_ELEMENT_WINDOW: {
+			struct ptychite_window *window = element_get_window(element);
 			window_relay_pointer_button(window, sx, sy, event);
 			return;
 		}
@@ -2893,9 +2412,9 @@ static void server_handle_seat_request_set_selection(struct wl_listener *listene
 	wlr_seat_set_selection(server->seat, event->source, event->serial);
 }
 
-static struct view *server_get_top_view(struct ptychite_server *server) {
+static struct ptychite_view *server_get_top_view(struct ptychite_server *server) {
 	if (server->active_monitor) {
-		struct view *view;
+		struct ptychite_view *view;
 		wl_list_for_each(view, &server->active_monitor->current_workspace->views_focus, workspace_focus_link) {
 			return view;
 		}
@@ -2903,7 +2422,7 @@ static struct view *server_get_top_view(struct ptychite_server *server) {
 		return NULL;
 	}
 
-	struct view *view;
+	struct ptychite_view *view;
 	wl_list_for_each(view, &server->views, server_link) {
 		return view;
 	}
@@ -2911,12 +2430,12 @@ static struct view *server_get_top_view(struct ptychite_server *server) {
 	return NULL;
 }
 
-static struct view *server_get_front_view(struct ptychite_server *server) {
+static struct ptychite_view *server_get_front_view(struct ptychite_server *server) {
 	if (!server->active_monitor) {
 		return NULL;
 	}
 
-	struct view *view;
+	struct ptychite_view *view;
 	wl_list_for_each(view, &server->active_monitor->current_workspace->views_order, workspace_order_link) {
 		return view;
 	}
@@ -2924,13 +2443,13 @@ static struct view *server_get_front_view(struct ptychite_server *server) {
 	return NULL;
 }
 
-static struct view *server_get_focused_view(struct ptychite_server *server) {
+static struct ptychite_view *server_get_focused_view(struct ptychite_server *server) {
 	struct wlr_surface *surface = server->seat->keyboard_state.focused_surface;
 	if (!surface) {
 		return NULL;
 	}
 
-	struct view *view = server_get_top_view(server);
+	struct ptychite_view *view = server_get_top_view(server);
 	if (!view) {
 		return NULL;
 	}
@@ -2943,12 +2462,12 @@ static struct view *server_get_focused_view(struct ptychite_server *server) {
 }
 
 static void server_tiling_change_views_in_master(struct ptychite_server *server, int delta) {
-	struct monitor *monitor = server->active_monitor;
+	struct ptychite_monitor *monitor = server->active_monitor;
 	if (!monitor) {
 		return;
 	}
 
-	struct workspace *workspace = monitor->current_workspace;
+	struct ptychite_workspace *workspace = monitor->current_workspace;
 	int views_in_master = workspace->tiling.traditional.views_in_master + delta;
 	if (views_in_master > 100) {
 		views_in_master = 100;
@@ -2965,12 +2484,12 @@ static void server_tiling_change_views_in_master(struct ptychite_server *server,
 }
 
 static void server_tiling_change_master_factor(struct ptychite_server *server, double delta) {
-	struct monitor *monitor = server->active_monitor;
+	struct ptychite_monitor *monitor = server->active_monitor;
 	if (!monitor) {
 		return;
 	}
 
-	struct workspace *workspace = monitor->current_workspace;
+	struct ptychite_workspace *workspace = monitor->current_workspace;
 	double master_factor = workspace->tiling.traditional.master_factor + delta;
 	if (master_factor > 0.95) {
 		master_factor = 0.95;
@@ -2987,9 +2506,9 @@ static void server_tiling_change_master_factor(struct ptychite_server *server, d
 }
 
 static void server_focus_any(struct ptychite_server *server) {
-	struct monitor *monitor = server->active_monitor;
+	struct ptychite_monitor *monitor = server->active_monitor;
 	if (monitor && !wl_list_empty(&monitor->current_workspace->views_focus)) {
-		struct view *view = wl_container_of(monitor->current_workspace->views_focus.next, view, workspace_focus_link);
+		struct ptychite_view *view = wl_container_of(monitor->current_workspace->views_focus.next, view, workspace_focus_link);
 		view_focus(view, view->xdg_toplevel->base->surface);
 	}
 }
@@ -3008,7 +2527,7 @@ static void server_action_terminate(struct ptychite_server *server, void *data) 
 }
 
 static void server_action_close(struct ptychite_server *server, void *data) {
-	struct view *view = server_get_focused_view(server);
+	struct ptychite_view *view = server_get_focused_view(server);
 	if (!view) {
 		return;
 	}
@@ -3054,19 +2573,19 @@ static void server_action_dec_mfact(struct ptychite_server *server, void *data) 
 }
 
 static void server_action_toggle_rmaster(struct ptychite_server *server, void *data) {
-	struct monitor *monitor = server->active_monitor;
+	struct ptychite_monitor *monitor = server->active_monitor;
 	if (!monitor) {
 		return;
 	}
 
-	struct workspace *workspace = monitor->current_workspace;
+	struct ptychite_workspace *workspace = monitor->current_workspace;
 	workspace->tiling.traditional.right_master = !workspace->tiling.traditional.right_master;
 
 	monitor_tile(monitor);
 }
 
 static void server_action_goto_next_workspace(struct ptychite_server *server, void *data) {
-	struct monitor *monitor = server->active_monitor;
+	struct ptychite_monitor *monitor = server->active_monitor;
 	if (!monitor) {
 		return;
 	}
@@ -3074,13 +2593,13 @@ static void server_action_goto_next_workspace(struct ptychite_server *server, vo
 	struct wl_list *list = monitor->current_workspace->link.next == &monitor->workspaces
 			? monitor->current_workspace->link.next->next
 			: monitor->current_workspace->link.next;
-	struct workspace *workspace = wl_container_of(list, workspace, link);
+	struct ptychite_workspace *workspace = wl_container_of(list, workspace, link);
 
 	monitor_switch_workspace(monitor, workspace);
 }
 
 static void server_action_goto_previous_workspace(struct ptychite_server *server, void *data) {
-	struct monitor *monitor = server->active_monitor;
+	struct ptychite_monitor *monitor = server->active_monitor;
 	if (!monitor) {
 		return;
 	}
@@ -3088,13 +2607,13 @@ static void server_action_goto_previous_workspace(struct ptychite_server *server
 	struct wl_list *list = monitor->current_workspace->link.prev == &monitor->workspaces
 			? monitor->current_workspace->link.prev->prev
 			: monitor->current_workspace->link.prev;
-	struct workspace *workspace = wl_container_of(list, workspace, link);
+	struct ptychite_workspace *workspace = wl_container_of(list, workspace, link);
 
 	monitor_switch_workspace(monitor, workspace);
 }
 
 static void server_action_focus_next_view(struct ptychite_server *server, void *data) {
-	struct view *old_view = server_get_focused_view(server);
+	struct ptychite_view *old_view = server_get_focused_view(server);
 	if (!old_view) {
 		server_focus_any(server);
 		return;
@@ -3103,13 +2622,13 @@ static void server_action_focus_next_view(struct ptychite_server *server, void *
 	struct wl_list *list = old_view->workspace_order_link.next == &old_view->workspace->views_order
 			? old_view->workspace_order_link.next->next
 			: old_view->workspace_order_link.next;
-	struct view *new_view = wl_container_of(list, new_view, workspace_order_link);
+	struct ptychite_view *new_view = wl_container_of(list, new_view, workspace_order_link);
 
 	view_focus(new_view, new_view->xdg_toplevel->base->surface);
 }
 
 static void server_action_focus_previous_view(struct ptychite_server *server, void *data) {
-	struct view *old_view = server_get_focused_view(server);
+	struct ptychite_view *old_view = server_get_focused_view(server);
 	if (!old_view) {
 		server_focus_any(server);
 		return;
@@ -3118,21 +2637,21 @@ static void server_action_focus_previous_view(struct ptychite_server *server, vo
 	struct wl_list *list = old_view->workspace_order_link.prev == &old_view->workspace->views_order
 			? old_view->workspace_order_link.prev->prev
 			: old_view->workspace_order_link.prev;
-	struct view *new_view = wl_container_of(list, new_view, workspace_order_link);
+	struct ptychite_view *new_view = wl_container_of(list, new_view, workspace_order_link);
 
 	view_focus(new_view, new_view->xdg_toplevel->base->surface);
 }
 
 static void server_action_swap_front(struct ptychite_server *server, void *data) {
-	struct view *view = server_get_focused_view(server);
+	struct ptychite_view *view = server_get_focused_view(server);
 	if (!view) {
 		return;
 	}
 
-	struct view *front = server_get_front_view(server);
+	struct ptychite_view *front = server_get_front_view(server);
 	assert(front);
 
-	struct view *new_front;
+	struct ptychite_view *new_front;
 	if (view == front) {
 		if (view->workspace_order_link.next == &view->workspace->views_order) {
 			return;
@@ -3150,24 +2669,24 @@ static void server_action_swap_front(struct ptychite_server *server, void *data)
 
 static const struct {
 	char *name;
-	action_func_t action_func;
-	enum action_func_data_mode data_mode;
+	ptychite_action_func_t action_func;
+	enum ptychite_action_func_data_mode data_mode;
 } ptychite_action_name_table[] = {
-		{"terminate", server_action_terminate, ACTION_FUNC_DATA_NONE},
-		{"close", server_action_close, ACTION_FUNC_DATA_NONE},
-		{"control", server_action_toggle_control, ACTION_FUNC_DATA_NONE},
-		{"spawn", server_action_spawn, ACTION_FUNC_DATA_ARGV},
-		{"shell", server_action_shell, ACTION_FUNC_DATA_STRING},
-		{"inc_master", server_action_inc_master, ACTION_FUNC_DATA_NONE},
-		{"dec_master", server_action_dec_master, ACTION_FUNC_DATA_NONE},
-		{"inc_mfact", server_action_inc_mfact, ACTION_FUNC_DATA_NONE},
-		{"dec_mfact", server_action_dec_mfact, ACTION_FUNC_DATA_NONE},
-		{"toggle_rmaster", server_action_toggle_rmaster, ACTION_FUNC_DATA_NONE},
-		{"next_workspace", server_action_goto_next_workspace, ACTION_FUNC_DATA_NONE},
-		{"prev_workspace", server_action_goto_previous_workspace, ACTION_FUNC_DATA_NONE},
-		{"next_view", server_action_focus_next_view, ACTION_FUNC_DATA_NONE},
-		{"prev_view", server_action_focus_previous_view, ACTION_FUNC_DATA_NONE},
-		{"swap_front", server_action_swap_front, ACTION_FUNC_DATA_NONE},
+		{"terminate", server_action_terminate, PTYCHITE_ACTION_FUNC_DATA_NONE},
+		{"close", server_action_close, PTYCHITE_ACTION_FUNC_DATA_NONE},
+		{"control", server_action_toggle_control, PTYCHITE_ACTION_FUNC_DATA_NONE},
+		{"spawn", server_action_spawn, PTYCHITE_ACTION_FUNC_DATA_ARGV},
+		{"shell", server_action_shell, PTYCHITE_ACTION_FUNC_DATA_STRING},
+		{"inc_master", server_action_inc_master, PTYCHITE_ACTION_FUNC_DATA_NONE},
+		{"dec_master", server_action_dec_master, PTYCHITE_ACTION_FUNC_DATA_NONE},
+		{"inc_mfact", server_action_inc_mfact, PTYCHITE_ACTION_FUNC_DATA_NONE},
+		{"dec_mfact", server_action_dec_mfact, PTYCHITE_ACTION_FUNC_DATA_NONE},
+		{"toggle_rmaster", server_action_toggle_rmaster, PTYCHITE_ACTION_FUNC_DATA_NONE},
+		{"next_workspace", server_action_goto_next_workspace, PTYCHITE_ACTION_FUNC_DATA_NONE},
+		{"prev_workspace", server_action_goto_previous_workspace, PTYCHITE_ACTION_FUNC_DATA_NONE},
+		{"next_view", server_action_focus_next_view, PTYCHITE_ACTION_FUNC_DATA_NONE},
+		{"prev_view", server_action_focus_previous_view, PTYCHITE_ACTION_FUNC_DATA_NONE},
+		{"swap_front", server_action_swap_front, PTYCHITE_ACTION_FUNC_DATA_NONE},
 };
 
 struct ptychite_server *ptychite_server_create(void) {
@@ -3266,7 +2785,7 @@ int ptychite_server_init_and_run(struct ptychite_server *server, struct ptychite
 	wlr_cursor_attach_output_layout(server->cursor, server->output_layout);
 
 	server->cursor_mgr = wlr_xcursor_manager_create(NULL, 24);
-	server->cursor_mode = CURSOR_PASSTHROUGH;
+	server->cursor_mode = PTYCHITE_CURSOR_PASSTHROUGH;
 	server->cursor_motion.notify = server_handle_cursor_motion;
 	wl_signal_add(&server->cursor->events.motion, &server->cursor_motion);
 	server->cursor_motion_absolute.notify = server_handle_cursor_motion_absolute;
@@ -3315,7 +2834,7 @@ int ptychite_server_init_and_run(struct ptychite_server *server, struct ptychite
 	server->new_xdg_decoration.notify = server_handle_new_xdg_decoration;
 	wl_signal_add(&xdg_decoration_manager->events.new_toplevel_decoration, &server->new_xdg_decoration);
 
-	if (!(server->control = calloc(1, sizeof(struct control)))) {
+	if (!(server->control = calloc(1, sizeof(struct ptychite_control)))) {
 		return -1;
 	}
 	if (window_init(&server->control->base, server, &control_window_impl, server->layers.overlay, NULL)) {
@@ -3359,7 +2878,7 @@ int ptychite_server_init_and_run(struct ptychite_server *server, struct ptychite
 void ptychite_server_configure_keyboards(struct ptychite_server *server) {
 	struct ptychite_config *config = server->compositor->config;
 
-	struct keyboard *keyboard;
+	struct ptychite_keyboard *keyboard;
 	wl_list_for_each(keyboard, &server->keyboards, link) {
 		wlr_keyboard_set_repeat_info(keyboard->keyboard, config->keyboard.repeat.rate, config->keyboard.repeat.delay);
 
@@ -3386,7 +2905,7 @@ void ptychite_server_configure_keyboards(struct ptychite_server *server) {
 }
 
 void ptychite_server_configure_panels(struct ptychite_server *server) {
-	struct monitor *monitor;
+	struct ptychite_monitor *monitor;
 	wl_list_for_each(monitor, &server->monitors, link) {
 		if (!monitor->panel) {
 			continue;
@@ -3408,7 +2927,7 @@ void ptychite_server_configure_panels(struct ptychite_server *server) {
 }
 
 void ptychite_server_configure_views(struct ptychite_server *server) {
-	struct view *view;
+	struct ptychite_view *view;
 	wl_list_for_each(view, &server->views, server_link) {
 		if (view->title_bar) {
 			wlr_scene_node_set_enabled(&view->title_bar->base.element.scene_tree->node,
@@ -3422,7 +2941,7 @@ void ptychite_server_configure_views(struct ptychite_server *server) {
 }
 
 void ptychite_server_refresh_wallpapers(struct ptychite_server *server) {
-	struct monitor *monitor;
+	struct ptychite_monitor *monitor;
 	wl_list_for_each(monitor, &server->monitors, link) {
 		if (!monitor->wallpaper) {
 			continue;
@@ -3433,7 +2952,7 @@ void ptychite_server_refresh_wallpapers(struct ptychite_server *server) {
 }
 
 void ptychite_server_retile(struct ptychite_server *server) {
-	struct monitor *monitor;
+	struct ptychite_monitor *monitor;
 	wl_list_for_each(monitor, &server->monitors, link) {
 		monitor_tile(monitor);
 	}
@@ -3466,7 +2985,7 @@ struct ptychite_action *ptychite_action_create(const char **args, int args_l, ch
 		}
 
 		switch (ptychite_action_name_table[i].data_mode) {
-		case ACTION_FUNC_DATA_NONE:
+		case PTYCHITE_ACTION_FUNC_DATA_NONE:
 			if (args_l != 1) {
 				*error = "actions with data type \"none\" require one argument";
 				goto err;
@@ -3475,7 +2994,7 @@ struct ptychite_action *ptychite_action_create(const char **args, int args_l, ch
 			action->data = NULL;
 			break;
 
-		case ACTION_FUNC_DATA_INT:
+		case PTYCHITE_ACTION_FUNC_DATA_INT:
 			if (args_l != 2) {
 				*error = "actions with data type \"int\" require two arguments";
 				goto err;
@@ -3488,7 +3007,7 @@ struct ptychite_action *ptychite_action_create(const char **args, int args_l, ch
 			*(int *)action->data = atoi(args[1]);
 			break;
 
-		case ACTION_FUNC_DATA_STRING:
+		case PTYCHITE_ACTION_FUNC_DATA_STRING:
 			if (args_l != 2) {
 				*error = "actions with data type \"string\" require two arguments";
 				goto err;
@@ -3500,7 +3019,7 @@ struct ptychite_action *ptychite_action_create(const char **args, int args_l, ch
 			}
 			break;
 
-		case ACTION_FUNC_DATA_ARGV:
+		case PTYCHITE_ACTION_FUNC_DATA_ARGV:
 			if (args_l < 2) {
 				*error = "actions with data type \"argv\" require at least two arguments";
 				goto err;
@@ -3554,18 +3073,18 @@ int ptychite_action_get_args(struct ptychite_action *action, char ***args_out, i
 		}
 
 		int args_l;
-		enum action_func_data_mode data_mode = ptychite_action_name_table[i].data_mode;
+		enum ptychite_action_func_data_mode data_mode = ptychite_action_name_table[i].data_mode;
 		switch (data_mode) {
-		case ACTION_FUNC_DATA_NONE:
+		case PTYCHITE_ACTION_FUNC_DATA_NONE:
 			args_l = 1;
 			break;
 
-		case ACTION_FUNC_DATA_INT:
-		case ACTION_FUNC_DATA_STRING:
+		case PTYCHITE_ACTION_FUNC_DATA_INT:
+		case PTYCHITE_ACTION_FUNC_DATA_STRING:
 			args_l = 2;
 			break;
 
-		case ACTION_FUNC_DATA_ARGV:
+		case PTYCHITE_ACTION_FUNC_DATA_ARGV:
 			for (args_l = 0; ((char **)action->data)[args_l]; args_l++) {
 				;
 			}
@@ -3589,10 +3108,10 @@ int ptychite_action_get_args(struct ptychite_action *action, char ***args_out, i
 		args[0] = name;
 
 		switch (data_mode) {
-		case ACTION_FUNC_DATA_NONE:
+		case PTYCHITE_ACTION_FUNC_DATA_NONE:
 			break;
 
-		case ACTION_FUNC_DATA_INT: {
+		case PTYCHITE_ACTION_FUNC_DATA_INT: {
 			char buffer[64];
 			snprintf(buffer, sizeof(buffer), "%d", *(int *)action->data);
 			if (!(args[1] = strdup(buffer))) {
@@ -3603,7 +3122,7 @@ int ptychite_action_get_args(struct ptychite_action *action, char ***args_out, i
 			break;
 		}
 
-		case ACTION_FUNC_DATA_STRING:
+		case PTYCHITE_ACTION_FUNC_DATA_STRING:
 			if (!(args[1] = strdup(action->data))) {
 				free(name);
 				free(args);
@@ -3611,7 +3130,7 @@ int ptychite_action_get_args(struct ptychite_action *action, char ***args_out, i
 			}
 			break;
 
-		case ACTION_FUNC_DATA_ARGV: {
+		case PTYCHITE_ACTION_FUNC_DATA_ARGV: {
 			int j;
 			for (j = 1; j < args_l; j++) {
 				if (!(args[j] = strdup(((char **)action->data)[j - 1]))) {
@@ -3644,12 +3163,12 @@ void ptychite_action_destroy(struct ptychite_action *action) {
 			continue;
 		}
 		switch (ptychite_action_name_table[i].data_mode) {
-		case ACTION_FUNC_DATA_INT:
-		case ACTION_FUNC_DATA_STRING:
+		case PTYCHITE_ACTION_FUNC_DATA_INT:
+		case PTYCHITE_ACTION_FUNC_DATA_STRING:
 			free(action->data);
 			break;
 
-		case ACTION_FUNC_DATA_ARGV: {
+		case PTYCHITE_ACTION_FUNC_DATA_ARGV: {
 			char **p;
 			for (p = action->data; *p; p++) {
 				free(*p);
@@ -3658,7 +3177,7 @@ void ptychite_action_destroy(struct ptychite_action *action) {
 			break;
 		}
 
-		case ACTION_FUNC_DATA_NONE:
+		case PTYCHITE_ACTION_FUNC_DATA_NONE:
 		default:
 			break;
 		}
