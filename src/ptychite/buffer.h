@@ -10,6 +10,6 @@ struct ptychite_buffer {
 	cairo_t *cairo;
 };
 
-extern const struct wlr_buffer_impl buffer_buffer_impl;
+extern const struct wlr_buffer_impl ptychite_buffer_buffer_impl;
 
 #endif

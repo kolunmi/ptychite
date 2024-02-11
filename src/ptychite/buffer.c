@@ -29,7 +29,7 @@ static bool buffer_begin_data_ptr_access(
 static void buffer_end_data_ptr_access(struct wlr_buffer *buffer) {
 }
 
-const struct wlr_buffer_impl buffer_buffer_impl = {
+const struct wlr_buffer_impl ptychite_buffer_buffer_impl = {
 		.destroy = buffer_destroy,
 		.begin_data_ptr_access = buffer_begin_data_ptr_access,
 		.end_data_ptr_access = buffer_end_data_ptr_access,

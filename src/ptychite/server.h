@@ -87,13 +87,13 @@ struct ptychite_server {
 };
 
 
-struct ptychite_view *server_get_top_view(struct ptychite_server *server);
-struct ptychite_view *server_get_front_view(struct ptychite_server *server);
-struct ptychite_view *server_get_focused_view(struct ptychite_server *server);
+struct ptychite_view *ptychite_server_get_top_view(struct ptychite_server *server);
+struct ptychite_view *ptychite_server_get_front_view(struct ptychite_server *server);
+struct ptychite_view *ptychite_server_get_focused_view(struct ptychite_server *server);
 
-void server_tiling_change_views_in_master(struct ptychite_server *server, int delta);
-void server_tiling_change_master_factor(struct ptychite_server *server, double delta);
-void server_focus_any(struct ptychite_server *server);
+void ptychite_server_tiling_change_views_in_master(struct ptychite_server *server, int delta);
+void ptychite_server_tiling_change_master_factor(struct ptychite_server *server, double delta);
+void ptychite_server_focus_any(struct ptychite_server *server);
 
 
 

@@ -38,11 +38,12 @@ struct ptychite_view {
 	struct wl_listener set_title;
 };
 
-struct ptychite_view *element_get_view(struct ptychite_element *element);
-void view_resize(struct ptychite_view *view, int width, int height);
-void surface_unfocus(struct wlr_surface *surface);
-void view_focus(struct ptychite_view *view, struct wlr_surface *surface);
-void view_begin_interactive(struct ptychite_view *view, enum ptychite_cursor_mode mode);
-void view_rig(struct ptychite_view *view, struct wlr_xdg_surface *xdg_surface);
+struct ptychite_view *ptychite_element_get_view(struct ptychite_element *element);
+
+void ptychite_view_resize(struct ptychite_view *view, int width, int height);
+void ptychite_surface_unfocus(struct wlr_surface *surface);
+void ptychite_view_focus(struct ptychite_view *view, struct wlr_surface *surface);
+void ptychite_view_begin_interactive(struct ptychite_view *view, enum ptychite_cursor_mode mode);
+void ptychite_view_rig(struct ptychite_view *view, struct wlr_xdg_surface *xdg_surface);
 
 #endif

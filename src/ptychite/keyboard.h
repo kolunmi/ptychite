@@ -13,6 +13,6 @@ struct ptychite_keyboard {
 	struct wl_listener destroy;
 };
 
-void keyboard_rig(struct ptychite_keyboard *keyboard, struct wlr_input_device *device);
+void ptychite_keyboard_rig(struct ptychite_keyboard *keyboard, struct wlr_input_device *device);
 
 #endif

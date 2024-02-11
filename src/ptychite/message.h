@@ -3,6 +3,6 @@
 
 struct ptychite_server;
 
-void setup_message_proto(struct ptychite_server *server);
+void ptychite_setup_message_proto(struct ptychite_server *server);
 
 #endif

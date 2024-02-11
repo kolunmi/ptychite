@@ -104,7 +104,7 @@ static void server_process_cursor_resize(struct ptychite_server *server, uint32_
 		new_bottom = new_top + 1;
 	}
 
-	view_resize(view, new_right - new_left, new_bottom - new_top);
+	ptychite_view_resize(view, new_right - new_left, new_bottom - new_top);
 }
 
 static void server_process_cursor_motion(struct ptychite_server *server, uint32_t time) {
@@ -137,21 +137,21 @@ static void server_process_cursor_motion(struct ptychite_server *server, uint32_
 				wlr_seat_pointer_clear_focus(server->seat);
 			}
 			if (server->hovered_window) {
-				window_relay_pointer_leave(server->hovered_window);
+				ptychite_window_relay_pointer_leave(server->hovered_window);
 				server->hovered_window = NULL;
 			}
 			break;
 		}
 		case PTYCHITE_ELEMENT_WINDOW: {
-			struct ptychite_window *window = element_get_window(element);
+			struct ptychite_window *window = ptychite_element_get_window(element);
 			if (window != server->hovered_window) {
 				if (server->hovered_window) {
-					window_relay_pointer_leave(server->hovered_window);
+					ptychite_window_relay_pointer_leave(server->hovered_window);
 				}
 				server->hovered_window = window;
-				window_relay_pointer_enter(window);
+				ptychite_window_relay_pointer_enter(window);
 			}
-			window_relay_pointer_move(window, sx, sy);
+			ptychite_window_relay_pointer_move(window, sx, sy);
 			wlr_seat_pointer_clear_focus(server->seat);
 			wlr_cursor_set_xcursor(server->cursor, server->cursor_mgr, "left_ptr");
 			break;
@@ -161,7 +161,7 @@ static void server_process_cursor_motion(struct ptychite_server *server, uint32_
 		wlr_cursor_set_xcursor(server->cursor, server->cursor_mgr, "left_ptr");
 		wlr_seat_pointer_clear_focus(server->seat);
 		if (server->hovered_window) {
-			window_relay_pointer_leave(server->hovered_window);
+			ptychite_window_relay_pointer_leave(server->hovered_window);
 			server->hovered_window = NULL;
 		}
 	}
@@ -203,7 +203,7 @@ static void server_new_keyboard(struct ptychite_server *server, struct wlr_input
 		wlr_keyboard_set_keymap(keyboard, NULL);
 	}
 
-	keyboard_rig(p_keyboard, device);
+	ptychite_keyboard_rig(p_keyboard, device);
 
 	wlr_seat_set_keyboard(server->seat, p_keyboard->keyboard);
 
@@ -225,7 +225,7 @@ static int server_time_tick_update(void *data) {
 				if (!monitor->panel || !monitor->panel->base.element.scene_tree->node.enabled) {
 					continue;
 				}
-				window_relay_draw_same_size(&monitor->panel->base);
+				ptychite_window_relay_draw_same_size(&monitor->panel->base);
 			}
 		}
 
@@ -240,7 +240,7 @@ static int server_time_tick_update(void *data) {
 			}
 			if (server->control_greeting != greeting) {
 				server->control_greeting = greeting;
-				control_draw_auto(server->control);
+				ptychite_control_draw_auto(server->control);
 			}
 		}
 	}
@@ -267,7 +267,7 @@ static void server_update_monitors(struct ptychite_server *server) {
 			}
 		}
 		wlr_output_layout_remove(server->output_layout, monitor->output);
-		monitor_disable(monitor);
+		ptychite_monitor_disable(monitor);
 	}
 
 	wl_list_for_each(monitor, &server->monitors, link) {
@@ -296,18 +296,18 @@ static void server_update_monitors(struct ptychite_server *server) {
 		if (monitor->wallpaper) {
 			wlr_scene_node_set_position(
 					&monitor->wallpaper->base.element.scene_tree->node, monitor->geometry.x, monitor->geometry.y);
-			wallpaper_draw_auto(monitor->wallpaper);
+			ptychite_wallpaper_draw_auto(monitor->wallpaper);
 		}
 
 		if (monitor->panel) {
 			wlr_scene_node_set_position(
 					&monitor->panel->base.element.scene_tree->node, monitor->geometry.x, monitor->geometry.y);
 			if (monitor->panel->base.element.scene_tree->node.enabled) {
-				panel_draw_auto(monitor->panel);
+				ptychite_panel_draw_auto(monitor->panel);
 			}
 		}
 
-		monitor_tile(monitor);
+		ptychite_monitor_tile(monitor);
 
 		if (output_config) {
 			struct wlr_output_configuration_head_v1 *head =
@@ -322,7 +322,7 @@ static void server_update_monitors(struct ptychite_server *server) {
 	}
 
 	if (server->control->base.element.scene_tree->node.enabled) {
-		control_draw_auto(server->control);
+		ptychite_control_draw_auto(server->control);
 	}
 
 	wlr_output_manager_v1_set_configuration(server->output_mgr, output_config);
@@ -405,7 +405,7 @@ static void server_handle_new_output(struct wl_listener *listener, void *data) {
 	}
 
 	wl_list_init(&monitor->workspaces);
-	if (!(monitor->current_workspace = monitor_add_workspace(monitor))) {
+	if (!(monitor->current_workspace = ptychite_monitor_add_workspace(monitor))) {
 		wlr_log(WLR_ERROR, "Could not initialize output: insufficent memory");
 		free(monitor);
 		return;
@@ -436,7 +436,7 @@ static void server_handle_new_output(struct wl_listener *listener, void *data) {
 	monitor->server = server;
 	wl_list_init(&monitor->views);
 
-	monitor_rig(monitor);
+	ptychite_monitor_rig(monitor);
 
 	wl_list_insert(&server->monitors, &monitor->link);
 	if (!server->active_monitor) {
@@ -444,7 +444,7 @@ static void server_handle_new_output(struct wl_listener *listener, void *data) {
 	}
 
 	if ((monitor->wallpaper = calloc(1, sizeof(struct ptychite_wallpaper)))) {
-		if (!window_init(&monitor->wallpaper->base, server, &wallpaper_window_impl, server->layers.bottom, output)) {
+		if (!ptychite_window_init(&monitor->wallpaper->base, server, &ptychite_wallpaper_window_impl, server->layers.bottom, output)) {
 			monitor->wallpaper->monitor = monitor;
 		} else {
 			free(monitor->wallpaper);
@@ -453,7 +453,7 @@ static void server_handle_new_output(struct wl_listener *listener, void *data) {
 	}
 
 	if ((monitor->panel = calloc(1, sizeof(struct ptychite_panel)))) {
-		if (!window_init(&monitor->panel->base, server, &panel_window_impl, server->layers.bottom, output)) {
+		if (!ptychite_window_init(&monitor->panel->base, server, &ptychite_panel_window_impl, server->layers.bottom, output)) {
 			monitor->panel->monitor = monitor;
 		} else {
 			free(monitor->panel);
@@ -504,7 +504,7 @@ static void server_handle_new_xdg_surface(struct wl_listener *listener, void *da
 	}
 
 	if ((view->title_bar = calloc(1, sizeof(struct ptychite_title_bar)))) {
-		if (!window_init(&view->title_bar->base, server, &title_bar_window_impl, view->element.scene_tree, NULL)) {
+		if (!ptychite_window_init(&view->title_bar->base, server, &ptychite_title_bar_window_impl, view->element.scene_tree, NULL)) {
 			view->title_bar->view = view;
 			wlr_scene_node_set_enabled(&view->title_bar->base.element.scene_tree->node,
 					server->compositor->config->views.title_bar.enabled);
@@ -515,7 +515,7 @@ static void server_handle_new_xdg_surface(struct wl_listener *listener, void *da
 		}
 	}
 
-	view_rig(view, xdg_surface);
+	ptychite_view_rig(view, xdg_surface);
 }
 
 static void server_handle_idle_inhibitor_create(struct wl_listener *listener, void *data) {
@@ -566,9 +566,9 @@ static void server_handle_cursor_button(struct wl_listener *listener, void *data
 		switch (element->type) {
 		case PTYCHITE_ELEMENT_VIEW:
 			if (event->state == WLR_BUTTON_PRESSED) {
-				struct ptychite_view *view = element_get_view(element);
+				struct ptychite_view *view = ptychite_element_get_view(element);
 				struct wlr_scene_surface *scene_surface = wlr_scene_surface_try_from_buffer(scene_buffer);
-				view_focus(view, scene_surface->surface);
+				ptychite_view_focus(view, scene_surface->surface);
 
 				struct wlr_keyboard *keyboard = wlr_seat_get_keyboard(server->seat);
 				if (!keyboard) {
@@ -578,18 +578,18 @@ static void server_handle_cursor_button(struct wl_listener *listener, void *data
 				uint32_t modifiers = wlr_keyboard_get_modifiers(keyboard);
 				if (modifiers == WLR_MODIFIER_LOGO) {
 					if (event->button == BTN_LEFT) {
-						view_begin_interactive(view, PTYCHITE_CURSOR_MOVE);
+						ptychite_view_begin_interactive(view, PTYCHITE_CURSOR_MOVE);
 						return;
 					} else if (event->button == BTN_RIGHT) {
-						view_begin_interactive(view, PTYCHITE_CURSOR_RESIZE);
+						ptychite_view_begin_interactive(view, PTYCHITE_CURSOR_RESIZE);
 						return;
 					}
 				}
 			}
 			break;
 		case PTYCHITE_ELEMENT_WINDOW: {
-			struct ptychite_window *window = element_get_window(element);
-			window_relay_pointer_button(window, sx, sy, event);
+			struct ptychite_window *window = ptychite_element_get_window(element);
+			ptychite_window_relay_pointer_button(window, sx, sy, event);
 			return;
 		}
 		}
@@ -651,7 +651,7 @@ static void server_handle_seat_request_set_selection(struct wl_listener *listene
 	wlr_seat_set_selection(server->seat, event->source, event->serial);
 }
 
-struct ptychite_view *server_get_top_view(struct ptychite_server *server) {
+struct ptychite_view *ptychite_server_get_top_view(struct ptychite_server *server) {
 	if (server->active_monitor) {
 		struct ptychite_view *view;
 		wl_list_for_each(view, &server->active_monitor->current_workspace->views_focus, workspace_focus_link) {
@@ -669,7 +669,7 @@ struct ptychite_view *server_get_top_view(struct ptychite_server *server) {
 	return NULL;
 }
 
-struct ptychite_view *server_get_front_view(struct ptychite_server *server) {
+struct ptychite_view *ptychite_server_get_front_view(struct ptychite_server *server) {
 	if (!server->active_monitor) {
 		return NULL;
 	}
@@ -682,13 +682,13 @@ struct ptychite_view *server_get_front_view(struct ptychite_server *server) {
 	return NULL;
 }
 
-struct ptychite_view *server_get_focused_view(struct ptychite_server *server) {
+struct ptychite_view *ptychite_server_get_focused_view(struct ptychite_server *server) {
 	struct wlr_surface *surface = server->seat->keyboard_state.focused_surface;
 	if (!surface) {
 		return NULL;
 	}
 
-	struct ptychite_view *view = server_get_top_view(server);
+	struct ptychite_view *view = ptychite_server_get_top_view(server);
 	if (!view) {
 		return NULL;
 	}
@@ -700,7 +700,7 @@ struct ptychite_view *server_get_focused_view(struct ptychite_server *server) {
 	return view;
 }
 
-void server_tiling_change_views_in_master(struct ptychite_server *server, int delta) {
+void ptychite_server_tiling_change_views_in_master(struct ptychite_server *server, int delta) {
 	struct ptychite_monitor *monitor = server->active_monitor;
 	if (!monitor) {
 		return;
@@ -719,10 +719,10 @@ void server_tiling_change_views_in_master(struct ptychite_server *server, int de
 	}
 
 	workspace->tiling.traditional.views_in_master = views_in_master;
-	monitor_tile(monitor);
+	ptychite_monitor_tile(monitor);
 }
 
-void server_tiling_change_master_factor(struct ptychite_server *server, double delta) {
+void ptychite_server_tiling_change_master_factor(struct ptychite_server *server, double delta) {
 	struct ptychite_monitor *monitor = server->active_monitor;
 	if (!monitor) {
 		return;
@@ -741,14 +741,14 @@ void server_tiling_change_master_factor(struct ptychite_server *server, double d
 	}
 
 	workspace->tiling.traditional.master_factor = master_factor;
-	monitor_tile(monitor);
+	ptychite_monitor_tile(monitor);
 }
 
-void server_focus_any(struct ptychite_server *server) {
+void ptychite_server_focus_any(struct ptychite_server *server) {
 	struct ptychite_monitor *monitor = server->active_monitor;
 	if (monitor && !wl_list_empty(&monitor->current_workspace->views_focus)) {
 		struct ptychite_view *view = wl_container_of(monitor->current_workspace->views_focus.next, view, workspace_focus_link);
-		view_focus(view, view->xdg_toplevel->base->surface);
+		ptychite_view_focus(view, view->xdg_toplevel->base->surface);
 	}
 }
 
@@ -871,7 +871,7 @@ int ptychite_server_init_and_run(struct ptychite_server *server, struct ptychite
 	server->request_set_selection.notify = server_handle_seat_request_set_selection;
 	wl_signal_add(&server->seat->events.request_set_selection, &server->request_set_selection);
 
-	setup_message_proto(server);
+	ptychite_setup_message_proto(server);
 
 	wlr_viewporter_create(server->display);
 	wlr_single_pixel_buffer_manager_v1_create(server->display);
@@ -900,10 +900,10 @@ int ptychite_server_init_and_run(struct ptychite_server *server, struct ptychite
 	if (!(server->control = calloc(1, sizeof(struct ptychite_control)))) {
 		return -1;
 	}
-	if (window_init(&server->control->base, server, &control_window_impl, server->layers.overlay, NULL)) {
+	if (ptychite_window_init(&server->control->base, server, &ptychite_control_window_impl, server->layers.overlay, NULL)) {
 		return -1;
 	}
-	control_hide(server->control);
+	ptychite_control_hide(server->control);
 
 	if (!(server->time_tick = wl_event_loop_add_timer(
 				  wl_display_get_event_loop(server->display), server_time_tick_update, server))) {
@@ -977,15 +977,15 @@ void ptychite_server_configure_panels(struct ptychite_server *server) {
 		wlr_scene_node_set_enabled(
 				&monitor->panel->base.element.scene_tree->node, server->compositor->config->panel.enabled);
 		if (monitor->panel->base.element.scene_tree->node.enabled) {
-			panel_draw_auto(monitor->panel);
+			ptychite_panel_draw_auto(monitor->panel);
 		} else {
 			monitor->window_geometry = monitor->geometry;
 		}
-		monitor_tile(monitor);
+		ptychite_monitor_tile(monitor);
 	}
 
 	if (server->control->base.element.scene_tree->node.enabled) {
-		control_draw_auto(server->control);
+		ptychite_control_draw_auto(server->control);
 	}
 }
 
@@ -997,7 +997,7 @@ void ptychite_server_configure_views(struct ptychite_server *server) {
 					server->compositor->config->views.title_bar.enabled);
 			wlr_scene_node_set_enabled(&view->border.top->node, !server->compositor->config->views.title_bar.enabled);
 		}
-		view_resize(view, view->element.width, view->element.height);
+		ptychite_view_resize(view, view->element.width, view->element.height);
 	}
 
 	ptychite_server_check_cursor(server);
@@ -1010,14 +1010,14 @@ void ptychite_server_refresh_wallpapers(struct ptychite_server *server) {
 			continue;
 		}
 
-		wallpaper_draw_auto(monitor->wallpaper);
+		ptychite_wallpaper_draw_auto(monitor->wallpaper);
 	}
 }
 
 void ptychite_server_retile(struct ptychite_server *server) {
 	struct ptychite_monitor *monitor;
 	wl_list_for_each(monitor, &server->monitors, link) {
-		monitor_tile(monitor);
+		ptychite_monitor_tile(monitor);
 	}
 }
 

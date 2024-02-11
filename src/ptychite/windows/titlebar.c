@@ -27,7 +27,7 @@ static void title_bar_draw(struct ptychite_window *window, cairo_t *cairo, int s
 	int y = (surface_height - font_height) / 2;
 
 	cairo_move_to(cairo, x, y);
-	cairo_draw_text(
+	ptychite_cairo_draw_text(
 			cairo, font->font, title_bar->view->xdg_toplevel->title, foreground, NULL, scale, false, NULL, NULL);
 
 	title_bar->regions.close.box = (struct wlr_box){
@@ -79,7 +79,7 @@ static void title_bar_handle_pointer_leave(struct ptychite_window *window) {
 	title_bar->regions.close.entered = false;
 
 	if (redraw) {
-		window_relay_draw_same_size(window);
+		ptychite_window_relay_draw_same_size(window);
 	}
 }
 
@@ -87,11 +87,11 @@ static void title_bar_handle_pointer_move(struct ptychite_window *window, double
 	struct ptychite_title_bar *title_bar = wl_container_of(window, title_bar, base);
 
 	bool redraw = false;
-	redraw |= mouse_region_update_state(&title_bar->regions.hide, x, y);
-	redraw |= mouse_region_update_state(&title_bar->regions.close, x, y);
+	redraw |= ptychite_mouse_region_update_state(&title_bar->regions.hide, x, y);
+	redraw |= ptychite_mouse_region_update_state(&title_bar->regions.close, x, y);
 
 	if (redraw) {
-		window_relay_draw_same_size(window);
+		ptychite_window_relay_draw_same_size(window);
 	}
 }
 
@@ -108,8 +108,8 @@ static void title_bar_handle_pointer_button(
 		return;
 	}
 
-	view_focus(title_bar->view, title_bar->view->xdg_toplevel->base->surface);
-	view_begin_interactive(title_bar->view, PTYCHITE_CURSOR_MOVE);
+	ptychite_view_focus(title_bar->view, title_bar->view->xdg_toplevel->base->surface);
+	ptychite_view_begin_interactive(title_bar->view, PTYCHITE_CURSOR_MOVE);
 }
 
 static void title_bar_destroy(struct ptychite_window *window) {
@@ -118,7 +118,7 @@ static void title_bar_destroy(struct ptychite_window *window) {
 	free(title_bar);
 }
 
-const struct ptychite_window_impl title_bar_window_impl = {
+const struct ptychite_window_impl ptychite_title_bar_window_impl = {
 		.draw = title_bar_draw,
 		.handle_pointer_enter = title_bar_handle_pointer_enter,
 		.handle_pointer_leave = title_bar_handle_pointer_leave,

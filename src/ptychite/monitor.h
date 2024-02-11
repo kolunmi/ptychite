@@ -34,11 +34,11 @@ struct ptychite_workspace {
 	struct ptychite_mouse_region region;
 };
 
-struct ptychite_workspace *monitor_add_workspace(struct ptychite_monitor *monitor);
-void monitor_tile(struct ptychite_monitor *monitor);
-void monitor_switch_workspace(struct ptychite_monitor *monitor, struct ptychite_workspace *workspace);
-void monitor_fix_workspaces(struct ptychite_monitor *monitor);
-void monitor_disable(struct ptychite_monitor *monitor);
-void monitor_rig(struct ptychite_monitor *monitor);
+struct ptychite_workspace *ptychite_monitor_add_workspace(struct ptychite_monitor *monitor);
+void ptychite_monitor_tile(struct ptychite_monitor *monitor);
+void ptychite_monitor_switch_workspace(struct ptychite_monitor *monitor, struct ptychite_workspace *workspace);
+void ptychite_monitor_fix_workspaces(struct ptychite_monitor *monitor);
+void ptychite_monitor_disable(struct ptychite_monitor *monitor);
+void ptychite_monitor_rig(struct ptychite_monitor *monitor);
 
 #endif

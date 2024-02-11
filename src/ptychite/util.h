@@ -8,8 +8,8 @@ struct ptychite_mouse_region {
 	bool entered;
 };
 
-bool mouse_region_update_state(struct ptychite_mouse_region *region, double x, double y);
+bool ptychite_mouse_region_update_state(struct ptychite_mouse_region *region, double x, double y);
 
-void spawn(char **args);
+void ptychite_spawn(char **args);
 
 #endif

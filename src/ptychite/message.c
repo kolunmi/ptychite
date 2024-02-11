@@ -219,6 +219,6 @@ static void message_handle_bind(struct wl_client *client, void *data, uint32_t v
 	wl_resource_set_implementation(resource, &ptychite_message_impl, data, message_handle_server_destroy);
 }
 
-void setup_message_proto(struct ptychite_server *server) {
+void ptychite_setup_message_proto(struct ptychite_server *server) {
 	wl_global_create(server->display, &zptychite_message_v1_interface, 1, server, message_handle_bind);
 }

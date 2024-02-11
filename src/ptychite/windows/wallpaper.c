@@ -49,7 +49,7 @@ static void wallpaper_destroy(struct ptychite_window *window) {
 	free(wallpaper);
 }
 
-const struct ptychite_window_impl wallpaper_window_impl = {
+const struct ptychite_window_impl ptychite_wallpaper_window_impl = {
 		.draw = wallpaper_draw,
 		.handle_pointer_enter = NULL,
 		.handle_pointer_leave = NULL,
@@ -58,6 +58,6 @@ const struct ptychite_window_impl wallpaper_window_impl = {
 		.destroy = wallpaper_destroy,
 };
 
-void wallpaper_draw_auto(struct ptychite_wallpaper *wallpaper) {
-	window_relay_draw(&wallpaper->base, wallpaper->monitor->geometry.width, wallpaper->monitor->geometry.height);
+void ptychite_wallpaper_draw_auto(struct ptychite_wallpaper *wallpaper) {
+	ptychite_window_relay_draw(&wallpaper->base, wallpaper->monitor->geometry.width, wallpaper->monitor->geometry.height);
 }

@@ -1,7 +1,6 @@
 #include "windows.h"
 #include "../config.h"
 #include "../compositor.h"
-#include "../macros.h"
 #include "../draw.h"
 #include "../server.h"
 #include "../monitor.h"
@@ -26,7 +25,7 @@ static void control_draw(struct ptychite_window *window, cairo_t *cairo, int sur
 	float *seperator = config->panel.colors.seperator;
 
 	int rect_radius = fmin(box.width, box.height) / 20;
-	cairo_draw_rounded_rect(cairo, box.x, box.y, box.width, box.height, rect_radius);
+	ptychite_cairo_draw_rounded_rect(cairo, box.x, box.y, box.width, box.height, rect_radius);
 	cairo_set_source_rgba(cairo, accent[0], accent[1], accent[2], accent[3]);
 	cairo_fill_preserve(cairo);
 	cairo_set_source_rgba(cairo, border[0], border[1], border[2], border[3]);
@@ -43,7 +42,7 @@ static void control_draw(struct ptychite_window *window, cairo_t *cairo, int sur
 
 	if (server->control_greeting) {
 		int height;
-		if (!cairo_draw_text_center(cairo, y, box.x, box.width, NULL, font->font, server->control_greeting, gray2, NULL,
+		if (!ptychite_cairo_draw_text_center(cairo, y, box.x, box.width, NULL, font->font, server->control_greeting, gray2, NULL,
 					scale * 0.8, false, NULL, &height)) {
 			y += height + rect_radius;
 			cairo_move_to(cairo, box.x, y);
@@ -58,7 +57,7 @@ static void control_draw(struct ptychite_window *window, cairo_t *cairo, int sur
 	int font_height = font->height * scale;
 	size_t i;
 	for (i = 0; i < 4; i++) {
-		cairo_draw_rounded_rect(cairo, box.x, y, box.width, font_height * 3, font_height);
+		ptychite_cairo_draw_rounded_rect(cairo, box.x, y, box.width, font_height * 3, font_height);
 		cairo_set_source_rgba(cairo, gray1[0], gray1[1], gray1[2], gray1[3]);
 		cairo_fill(cairo);
 		y += font_height * 3 + rect_radius;
@@ -78,7 +77,7 @@ static void control_destroy(struct ptychite_window *window) {
 	free(control);
 }
 
-const struct ptychite_window_impl control_window_impl = {
+const struct ptychite_window_impl ptychite_control_window_impl = {
 		.draw = control_draw,
 		.handle_pointer_enter = NULL,
 		.handle_pointer_leave = NULL,
@@ -87,7 +86,7 @@ const struct ptychite_window_impl control_window_impl = {
 		.destroy = control_destroy,
 };
 
-void control_draw_auto(struct ptychite_control *control) {
+void ptychite_control_draw_auto(struct ptychite_control *control) {
 	struct ptychite_monitor *monitor = control->base.server->active_monitor;
 
 	if (!monitor) {
@@ -106,22 +105,22 @@ void control_draw_auto(struct ptychite_control *control) {
 			monitor->window_geometry.y + margin);
 
 	control->base.output = monitor->output;
-	window_relay_draw(&control->base, width, height);
+	ptychite_window_relay_draw(&control->base, width, height);
 }
 
-void control_show(struct ptychite_control *control) {
-	control_draw_auto(control);
+void ptychite_control_show(struct ptychite_control *control) {
+	ptychite_control_draw_auto(control);
 	wlr_scene_node_set_enabled(&control->base.element.scene_tree->node, true);
 	struct ptychite_monitor *monitor = control->base.server->active_monitor;
 	if (monitor && monitor->panel && monitor->panel->base.element.scene_tree->node.enabled) {
-		window_relay_draw_same_size(&monitor->panel->base);
+		ptychite_window_relay_draw_same_size(&monitor->panel->base);
 	}
 }
 
-void control_hide(struct ptychite_control *control) {
+void ptychite_control_hide(struct ptychite_control *control) {
 	wlr_scene_node_set_enabled(&control->base.element.scene_tree->node, false);
 	struct ptychite_monitor *monitor = control->base.server->active_monitor;
 	if (monitor && monitor->panel && monitor->panel->base.element.scene_tree->node.enabled) {
-		window_relay_draw_same_size(&monitor->panel->base);
+		ptychite_window_relay_draw_same_size(&monitor->panel->base);
 	}
 }

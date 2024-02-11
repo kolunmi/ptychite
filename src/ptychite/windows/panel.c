@@ -325,7 +325,7 @@ static void panel_draw(struct ptychite_window *window, cairo_t *cairo, int surfa
 		};
 		char *chord_string = ptychite_chord_get_pattern(&chord);
 		if (chord_string) {
-			cairo_draw_text_right(cairo, y, surface_width - font_height, NULL, font->font, chord_string, foreground,
+			ptychite_cairo_draw_text_right(cairo, y, surface_width - font_height, NULL, font->font, chord_string, foreground,
 					chord_color, scale, false, NULL, NULL);
 			free(chord_string);
 		}
@@ -338,7 +338,7 @@ static void panel_draw(struct ptychite_window *window, cairo_t *cairo, int surfa
 				? accent
 				: NULL;
 		int width;
-		if (!cairo_draw_text_center(cairo, y, 0, surface_width, &x, font->font, server->panel_date, foreground, bg,
+		if (!ptychite_cairo_draw_text_center(cairo, y, 0, surface_width, &x, font->font, server->panel_date, foreground, bg,
 					scale, false, &width, NULL)) {
 			panel->regions.time.box = (struct wlr_box){
 					.x = x,
@@ -369,7 +369,7 @@ static void panel_handle_pointer_leave(struct ptychite_window *window) {
 	}
 
 	if (redraw) {
-		window_relay_draw_same_size(window);
+		ptychite_window_relay_draw_same_size(window);
 	}
 }
 
@@ -377,16 +377,16 @@ static void panel_handle_pointer_move(struct ptychite_window *window, double x, 
 	struct ptychite_panel *panel = wl_container_of(window, panel, base);
 
 	bool redraw = false;
-	redraw |= mouse_region_update_state(&panel->regions.shell, x, y);
-	redraw |= mouse_region_update_state(&panel->regions.time, x, y);
+	redraw |= ptychite_mouse_region_update_state(&panel->regions.shell, x, y);
+	redraw |= ptychite_mouse_region_update_state(&panel->regions.time, x, y);
 
 	struct ptychite_workspace *workspace;
 	wl_list_for_each(workspace, &panel->monitor->workspaces, link) {
-		redraw |= mouse_region_update_state(&workspace->region, x, y);
+		redraw |= ptychite_mouse_region_update_state(&workspace->region, x, y);
 	}
 
 	if (redraw) {
-		window_relay_draw_same_size(window);
+		ptychite_window_relay_draw_same_size(window);
 	}
 }
 
@@ -403,9 +403,9 @@ static void panel_handle_pointer_button(
 	if (panel->regions.time.entered) {
 		struct ptychite_server *server = panel->monitor->server;
 		if (server->control->base.element.scene_tree->node.enabled) {
-			control_hide(server->control);
+			ptychite_control_hide(server->control);
 		} else {
-			control_show(server->control);
+			ptychite_control_show(server->control);
 		}
 	}
 
@@ -413,7 +413,7 @@ static void panel_handle_pointer_button(
 	wl_list_for_each(workspace, &panel->monitor->workspaces, link) {
 		if (workspace->region.entered) {
 			if (workspace != panel->monitor->current_workspace) {
-				monitor_switch_workspace(panel->monitor, workspace);
+				ptychite_monitor_switch_workspace(panel->monitor, workspace);
 			}
 			break;
 		}
@@ -426,7 +426,7 @@ static void panel_destroy(struct ptychite_window *window) {
 	free(panel);
 }
 
-const struct ptychite_window_impl panel_window_impl = {
+const struct ptychite_window_impl ptychite_panel_window_impl = {
 		.draw = panel_draw,
 		.handle_pointer_enter = panel_handle_pointer_enter,
 		.handle_pointer_leave = panel_handle_pointer_leave,
@@ -435,12 +435,12 @@ const struct ptychite_window_impl panel_window_impl = {
 		.destroy = panel_destroy,
 };
 
-void panel_draw_auto(struct ptychite_panel *panel) {
+void ptychite_panel_draw_auto(struct ptychite_panel *panel) {
 	struct ptychite_font *font = &panel->monitor->server->compositor->config->panel.font;
 	int height = font->height + font->height / 2;
 
 	panel->monitor->window_geometry.y = panel->monitor->geometry.y + height;
 	panel->monitor->window_geometry.height = panel->monitor->geometry.height - height;
 
-	window_relay_draw(&panel->base, panel->monitor->geometry.width, height);
+	ptychite_window_relay_draw(&panel->base, panel->monitor->geometry.width, height);
 }

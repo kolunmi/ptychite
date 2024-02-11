@@ -27,16 +27,16 @@ struct ptychite_window_impl {
 	void (*destroy)(struct ptychite_window *window);
 };
 
-struct ptychite_window *element_get_window(struct ptychite_element *element);
+struct ptychite_window *ptychite_element_get_window(struct ptychite_element *element);
 
-int window_init(struct ptychite_window *window, struct ptychite_server *server, const struct ptychite_window_impl *impl,
+int ptychite_window_init(struct ptychite_window *window, struct ptychite_server *server, const struct ptychite_window_impl *impl,
 		struct wlr_scene_tree *parent, struct wlr_output *output);
-int window_relay_draw(struct ptychite_window *window, int width, int height);
-void window_relay_draw_same_size(struct ptychite_window *window);
-void window_relay_pointer_enter(struct ptychite_window *window);
-void window_relay_pointer_leave(struct ptychite_window *window);
-void window_relay_pointer_move(struct ptychite_window *window, double x, double y);
-void window_relay_pointer_button(
+int ptychite_window_relay_draw(struct ptychite_window *window, int width, int height);
+void ptychite_window_relay_draw_same_size(struct ptychite_window *window);
+void ptychite_window_relay_pointer_enter(struct ptychite_window *window);
+void ptychite_window_relay_pointer_leave(struct ptychite_window *window);
+void ptychite_window_relay_pointer_move(struct ptychite_window *window, double x, double y);
+void ptychite_window_relay_pointer_button(
 		struct ptychite_window *window, double x, double y, struct wlr_pointer_button_event *event);
 
 /* Wallpaper */
@@ -45,9 +45,9 @@ struct ptychite_wallpaper {
 	struct ptychite_monitor *monitor;
 };
 
-extern const struct ptychite_window_impl wallpaper_window_impl;
+extern const struct ptychite_window_impl ptychite_wallpaper_window_impl;
 
-void wallpaper_draw_auto(struct ptychite_wallpaper *wallpaper);
+void ptychite_wallpaper_draw_auto(struct ptychite_wallpaper *wallpaper);
 
 /* Panel */
 struct ptychite_panel {
@@ -60,9 +60,9 @@ struct ptychite_panel {
 	} regions;
 };
 
-extern const struct ptychite_window_impl panel_window_impl;
+extern const struct ptychite_window_impl ptychite_panel_window_impl;
 
-void panel_draw_auto(struct ptychite_panel *panel);
+void ptychite_panel_draw_auto(struct ptychite_panel *panel);
 
 /* Control */
 struct ptychite_control {
@@ -73,11 +73,11 @@ struct ptychite_control {
 	} time;
 };
 
-extern const struct ptychite_window_impl control_window_impl;
+extern const struct ptychite_window_impl ptychite_control_window_impl;
 
-void control_draw_auto(struct ptychite_control *control);
-void control_show(struct ptychite_control *control);
-void control_hide(struct ptychite_control *control);
+void ptychite_control_draw_auto(struct ptychite_control *control);
+void ptychite_control_show(struct ptychite_control *control);
+void ptychite_control_hide(struct ptychite_control *control);
 
 /* Title Bar */
 struct ptychite_title_bar {
@@ -90,6 +90,6 @@ struct ptychite_title_bar {
 	} regions;
 };
 
-extern const struct ptychite_window_impl title_bar_window_impl;
+extern const struct ptychite_window_impl ptychite_title_bar_window_impl;
 
 #endif

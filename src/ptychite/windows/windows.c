@@ -7,7 +7,7 @@
 #include "../buffer.h"
 #include "../server.h"
 
-struct ptychite_window *element_get_window(struct ptychite_element *element) {
+struct ptychite_window *ptychite_element_get_window(struct ptychite_element *element) {
 	assert(element->type == PTYCHITE_ELEMENT_WINDOW);
 
 	struct ptychite_window *window = wl_container_of(element, window, element);
@@ -27,7 +27,7 @@ static void window_handle_destroy(struct wl_listener *listener, void *data) {
 	window->impl->destroy(window);
 }
 
-int window_init(struct ptychite_window *window, struct ptychite_server *server, const struct ptychite_window_impl *impl,
+int ptychite_window_init(struct ptychite_window *window, struct ptychite_server *server, const struct ptychite_window_impl *impl,
 		struct wlr_scene_tree *parent, struct wlr_output *output) {
 	if (!(window->element.scene_tree = wlr_scene_tree_create(parent))) {
 		return -1;
@@ -52,7 +52,7 @@ int window_init(struct ptychite_window *window, struct ptychite_server *server, 
 	return 0;
 }
 
-int window_relay_draw(struct ptychite_window *window, int width, int height) {
+int ptychite_window_relay_draw(struct ptychite_window *window, int width, int height) {
 	if (!window->impl || !window->impl->draw) {
 		return -1;
 	}
@@ -105,7 +105,7 @@ int window_relay_draw(struct ptychite_window *window, int width, int height) {
 
 	buffer->cairo = cairo;
 	buffer->surface = surface;
-	wlr_buffer_init(&buffer->base, &buffer_buffer_impl, scaled_width, scaled_height);
+	wlr_buffer_init(&buffer->base, &ptychite_buffer_buffer_impl, scaled_width, scaled_height);
 
 	wlr_scene_buffer_set_dest_size(window->scene_buffer, width, height);
 	wlr_scene_buffer_set_buffer(window->scene_buffer, &buffer->base);
@@ -124,11 +124,11 @@ err_create_cairo:
 	return -1;
 }
 
-void window_relay_draw_same_size(struct ptychite_window *window) {
-	window_relay_draw(window, window->element.width, window->element.height);
+void ptychite_window_relay_draw_same_size(struct ptychite_window *window) {
+	ptychite_window_relay_draw(window, window->element.width, window->element.height);
 }
 
-void window_relay_pointer_enter(struct ptychite_window *window) {
+void ptychite_window_relay_pointer_enter(struct ptychite_window *window) {
 	if (!window->impl || !window->impl->handle_pointer_enter) {
 		return;
 	}
@@ -136,7 +136,7 @@ void window_relay_pointer_enter(struct ptychite_window *window) {
 	window->impl->handle_pointer_enter(window);
 }
 
-void window_relay_pointer_leave(struct ptychite_window *window) {
+void ptychite_window_relay_pointer_leave(struct ptychite_window *window) {
 	if (!window->impl || !window->impl->handle_pointer_leave) {
 		return;
 	}
@@ -144,7 +144,7 @@ void window_relay_pointer_leave(struct ptychite_window *window) {
 	window->impl->handle_pointer_leave(window);
 }
 
-void window_relay_pointer_move(struct ptychite_window *window, double x, double y) {
+void ptychite_window_relay_pointer_move(struct ptychite_window *window, double x, double y) {
 	if (!window->impl || !window->impl->handle_pointer_move) {
 		return;
 	}
@@ -156,7 +156,7 @@ void window_relay_pointer_move(struct ptychite_window *window, double x, double 
 	window->impl->handle_pointer_move(window, scale_x, scale_y);
 }
 
-void window_relay_pointer_button(
+void ptychite_window_relay_pointer_button(
 		struct ptychite_window *window, double x, double y, struct wlr_pointer_button_event *event) {
 	if (!window->impl || !window->impl->handle_pointer_button) {
 		return;

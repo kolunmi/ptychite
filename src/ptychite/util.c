@@ -3,7 +3,7 @@
 
 #include "util.h"
 
-bool mouse_region_update_state(struct ptychite_mouse_region *region, double x, double y) {
+bool ptychite_mouse_region_update_state(struct ptychite_mouse_region *region, double x, double y) {
 	if (wlr_box_contains_point(&region->box, x, y)) {
 		if (region->entered) {
 			return false;
@@ -19,7 +19,7 @@ bool mouse_region_update_state(struct ptychite_mouse_region *region, double x, d
 	return false;
 }
 
-void spawn(char **args) {
+void ptychite_spawn(char **args) {
 	if (!fork()) {
 		dup2(STDERR_FILENO, STDOUT_FILENO);
 		setsid();

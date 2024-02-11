@@ -143,7 +143,7 @@ static void keyboard_handle_key(struct wl_listener *listener, void *data) {
 			struct ptychite_monitor *monitor;
 			wl_list_for_each(monitor, &server->monitors, link) {
 				if (monitor->panel && monitor->panel->base.element.scene_tree->node.enabled) {
-					window_relay_draw_same_size(&monitor->panel->base);
+					ptychite_window_relay_draw_same_size(&monitor->panel->base);
 				}
 			}
 		}
@@ -173,7 +173,7 @@ static void keyboard_handle_modifiers(struct wl_listener *listener, void *data) 
 	wlr_seat_keyboard_notify_modifiers(keyboard->server->seat, &keyboard->keyboard->modifiers);
 }
 
-void keyboard_rig(struct ptychite_keyboard *keyboard, struct wlr_input_device *device) {
+void ptychite_keyboard_rig(struct ptychite_keyboard *keyboard, struct wlr_input_device *device) {
   	keyboard->modifiers.notify = keyboard_handle_modifiers;
 	wl_signal_add(&keyboard->keyboard->events.modifiers, &keyboard->modifiers);
 	keyboard->key.notify = keyboard_handle_key;

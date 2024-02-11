@@ -5,7 +5,7 @@
 #include "view.h"
 #include "windows/windows.h"
 
-struct ptychite_workspace *monitor_add_workspace(struct ptychite_monitor *monitor) {
+struct ptychite_workspace *ptychite_monitor_add_workspace(struct ptychite_monitor *monitor) {
 	struct ptychite_workspace *workspace = calloc(1, sizeof(struct ptychite_workspace));
 	if (!workspace) {
 		return NULL;
@@ -22,7 +22,7 @@ struct ptychite_workspace *monitor_add_workspace(struct ptychite_monitor *monito
 	return workspace;
 }
 
-void monitor_tile(struct ptychite_monitor *monitor) {
+void ptychite_monitor_tile(struct ptychite_monitor *monitor) {
 	struct ptychite_workspace *workspace = monitor->current_workspace;
 	if (wl_list_empty(&workspace->views_order)) {
 		return;
@@ -60,14 +60,14 @@ void monitor_tile(struct ptychite_monitor *monitor) {
 				int height = (monitor->window_geometry.height - master_y - gaps * r) / r;
 				wlr_scene_node_set_position(
 						&view->element.scene_tree->node, master_x, monitor->window_geometry.y + master_y);
-				view_resize(view, master_width - gaps, height);
+				ptychite_view_resize(view, master_width - gaps, height);
 				master_y += view->element.height + gaps;
 			} else {
 				int r = views_len - i;
 				int height = (monitor->window_geometry.height - stack_y - gaps * r) / r;
 				wlr_scene_node_set_position(
 						&view->element.scene_tree->node, stack_x, monitor->window_geometry.y + stack_y);
-				view_resize(view, monitor->window_geometry.width - master_width - 2 * gaps, height);
+				ptychite_view_resize(view, monitor->window_geometry.width - master_width - 2 * gaps, height);
 				stack_y += view->element.height + gaps;
 			}
 			i++;
@@ -80,7 +80,7 @@ void monitor_tile(struct ptychite_monitor *monitor) {
 	ptychite_server_check_cursor(monitor->server);
 }
 
-void monitor_fix_workspaces(struct ptychite_monitor *monitor) {
+void ptychite_monitor_fix_workspaces(struct ptychite_monitor *monitor) {
 	struct ptychite_workspace *end_workspace = wl_container_of(monitor->workspaces.prev, end_workspace, link);
 
 	struct ptychite_workspace *workspace, *workspace_tmp;
@@ -98,7 +98,7 @@ void monitor_fix_workspaces(struct ptychite_monitor *monitor) {
 	}
 }
 
-void monitor_switch_workspace(struct ptychite_monitor *monitor, struct ptychite_workspace *workspace) {
+void ptychite_monitor_switch_workspace(struct ptychite_monitor *monitor, struct ptychite_workspace *workspace) {
 	struct ptychite_workspace *last_workspace = monitor->current_workspace;
 	monitor->current_workspace = workspace;
 
@@ -110,27 +110,27 @@ void monitor_switch_workspace(struct ptychite_monitor *monitor, struct ptychite_
 		wlr_scene_node_set_enabled(&view->element.scene_tree->node, true);
 	}
 
-	monitor_fix_workspaces(monitor);
+	ptychite_monitor_fix_workspaces(monitor);
 	if (monitor->panel && monitor->panel->base.element.scene_tree->node.enabled) {
-		window_relay_draw_same_size(&monitor->panel->base);
+		ptychite_window_relay_draw_same_size(&monitor->panel->base);
 	}
 
 	if (wl_list_empty(&monitor->current_workspace->views_focus)) {
 		struct wlr_surface *focused_surface = monitor->server->seat->keyboard_state.focused_surface;
 		if (focused_surface) {
-			surface_unfocus(focused_surface);
+			ptychite_surface_unfocus(focused_surface);
 			wlr_seat_keyboard_notify_clear_focus(monitor->server->seat);
 		}
 	} else {
 		struct ptychite_view *new_view =
 				wl_container_of(monitor->current_workspace->views_focus.next, new_view, workspace_focus_link);
-		view_focus(new_view, new_view->xdg_toplevel->base->surface);
+		ptychite_view_focus(new_view, new_view->xdg_toplevel->base->surface);
 	}
 
 	ptychite_server_check_cursor(monitor->server);
 }
 
-void monitor_disable(struct ptychite_monitor *monitor) {
+void ptychite_monitor_disable(struct ptychite_monitor *monitor) {
 	struct ptychite_server *server = monitor->server;
 
 	if (monitor == server->active_monitor) {
@@ -166,7 +166,7 @@ void monitor_disable(struct ptychite_monitor *monitor) {
 		}
 		wl_list_init(&monitor->views);
 
-		monitor_tile(server->active_monitor);
+		ptychite_monitor_tile(server->active_monitor);
 	}
 }
 
@@ -225,7 +225,7 @@ static void monitor_handle_destroy(struct wl_listener *listener, void *data) {
 		}
 	}
 
-	monitor_disable(monitor);
+	ptychite_monitor_disable(monitor);
 	struct ptychite_workspace *workspace;
 	wl_list_for_each(workspace, &monitor->workspaces, link) {
 		free(workspace);
@@ -234,7 +234,7 @@ static void monitor_handle_destroy(struct wl_listener *listener, void *data) {
 	free(monitor);
 }
 
-void monitor_rig(struct ptychite_monitor *monitor) {
+void ptychite_monitor_rig(struct ptychite_monitor *monitor) {
 	monitor->frame.notify = monitor_handle_frame;
 	wl_signal_add(&monitor->output->events.frame, &monitor->frame);
 	monitor->request_state.notify = monitor_handle_request_state;
