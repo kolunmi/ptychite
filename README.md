@@ -1,15 +1,13 @@
 <div align="center">
-<img src="https://git.sr.ht/~kolunmi/ptychite/blob/main/ptychite.png" width=30% height=30%>
+<img src="ptychite.png" width=30% height=30%>
 </div>
-
-[![builds.sr.ht status](https://builds.sr.ht/~kolunmi/ptychite/.svg)](https://builds.sr.ht/~kolunmi/ptychite/?)
 
 # Ptychite
 A flexible, approachable, and powerful wayland compositor. This project is still in its early stages; it's not currently usable as a daily driver, but will be soon!
 
-Note: ptychite is developed on [sr.ht](https://git.sr.ht/~kolunmi/ptychite).
+Note: ptychite is now developed on [codeberg](https://codeberg.org/kolunmi/ptychite).
 
-![screenshot](https://git.sr.ht/~kolunmi/ptychite/blob/main/screenshot.png "screenshot")
+![screenshot](screenshot.png "screenshot")
 
 ## Project Goals
 * performant
@@ -116,4 +114,4 @@ A list of all properties to filter through will appear. You will be prompted to 
 * [zenity](https://gitlab.gnome.org/GNOME/zenity) for the color picker
 
 ## Contributing
-Thank you for your interest in my project!! If you would like to contribute, please send patches to [~kolunmi/ptychite@lists.sr.ht](https://lists.sr.ht/~kolunmi/ptychite).
+Thank you for your interest in my project!! If you would like to contribute, please [open a pull request](https://codeberg.org/kolunmi/ptychite/pulls) or [file an issue](https://codeberg.org/kolunmi/ptychite/issues).
