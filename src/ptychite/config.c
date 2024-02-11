@@ -14,6 +14,7 @@
 #include "json.h"
 #include "macros.h"
 #include "server.h"
+#include "action.h"
 
 typedef int (*ptychite_property_set_func_t)(
 		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error);
