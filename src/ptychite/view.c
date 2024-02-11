@@ -4,7 +4,7 @@
 #include "view.h"
 #include "config.h"
 #include "server.h"
-#include "windows/windows.h"
+#include "windows.h"
 #include "compositor.h"
 #include "monitor.h"
 

@@ -7,7 +7,7 @@
 #include "server.h"
 #include "view.h"
 #include "monitor.h"
-#include "windows/windows.h"
+#include "windows.h"
 #include "macros.h"
 
 static void server_action_terminate(struct ptychite_server *server, void *data) {

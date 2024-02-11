@@ -4,8 +4,8 @@
 #include <pango/pangocairo.h>
 
 #include "windows.h"
-#include "../buffer.h"
-#include "../server.h"
+#include "buffer.h"
+#include "server.h"
 
 struct ptychite_window *ptychite_element_get_window(struct ptychite_element *element) {
 	assert(element->type == PTYCHITE_ELEMENT_WINDOW);

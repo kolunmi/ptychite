@@ -99,7 +99,7 @@ executable(
     'src/ptychite/view.h',
     'src/ptychite/keyboard.h',
     'src/ptychite/draw.h',
-    'src/ptychite/windows/windows.h',
+    'src/ptychite/windows.h',
     'src/ptychite/config.h',
     'src/ptychite/json.h',
     'src/ptychite/macros.h',
@@ -117,8 +117,8 @@ executable(
     'src/ptychite/view.c',
     'src/ptychite/keyboard.c',
     'src/ptychite/draw.c',
+    'src/ptychite/windows.c',
     
-    'src/ptychite/windows/windows.c',
     'src/ptychite/windows/wallpaper.c',
     'src/ptychite/windows/panel.c',
     'src/ptychite/windows/control.c',

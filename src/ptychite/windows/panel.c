@@ -1,6 +1,6 @@
 #include <librsvg/rsvg.h>
 
-#include "windows.h"
+#include "../windows.h"
 #include "../config.h"
 #include "../compositor.h"
 #include "../macros.h"

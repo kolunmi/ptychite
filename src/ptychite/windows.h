@@ -4,8 +4,8 @@
 #include <wlr/types/wlr_pointer.h>
 #include <cairo.h>
 
-#include "../util.h"
-#include "../element.h"
+#include "util.h"
+#include "element.h"
 
 struct ptychite_window {
 	struct ptychite_element element;

@@ -6,7 +6,7 @@
 #include "compositor.h"
 #include "config.h"
 #include "monitor.h"
-#include "windows/windows.h"
+#include "windows.h"
 
 static void keyboard_handle_key(struct wl_listener *listener, void *data) {
 	struct ptychite_keyboard *keyboard = wl_container_of(listener, keyboard, key);

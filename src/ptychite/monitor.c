@@ -3,7 +3,7 @@
 #include "monitor.h"
 #include "server.h"
 #include "view.h"
-#include "windows/windows.h"
+#include "windows.h"
 
 struct ptychite_workspace *ptychite_monitor_add_workspace(struct ptychite_monitor *monitor) {
 	struct ptychite_workspace *workspace = calloc(1, sizeof(struct ptychite_workspace));
