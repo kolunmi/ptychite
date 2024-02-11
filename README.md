@@ -46,6 +46,8 @@ ninja -C build/
 ```
 
 ## Configuration
+NOTE: In the future, ptychite will be configured with a graphical settings application, so most of the following information will be technical/scripting details. It is not my goal for the user to manually edit a json file. For now, `ptycfg`, which is discussed later, serves as the user-friendly alternative, but it is far from a perfect solution. Since the actual settings client has yet to be developed, I will keep this information here.
+
 ptychite is configured in json; all data you send to and recieve from the compositor will be in this format. Upon startup ptychite looks for the file `~/.config/ptychite/ptychite.json` (see `sample_config.json`). This file will instruct ptychite to build a configuration with the given property nodes. Properties are expressed as paths delimited by `:` characters.
 
 This simple configuration will accept the default values for all properties except `keyboard:repeat:rate`, `keyboard:repeat:delay`, and `keyboard:xkb:options`, for which custom values are provided:
