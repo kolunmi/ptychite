@@ -1,6 +1,8 @@
 #include "windows.h"
 #include "../config.h"
 #include "../compositor.h"
+#include "../monitor.h"
+#include "../server.h"
 
 static void wallpaper_draw(struct ptychite_window *window, cairo_t *cairo, int surface_width, int surface_height, float scale) {
 	struct ptychite_panel *wallpaper = wl_container_of(window, wallpaper, base);

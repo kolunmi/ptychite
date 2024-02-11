@@ -1,9 +1,19 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_output.h>
+#include <assert.h>
 #include <pango/pangocairo.h>
 
 #include "windows.h"
 #include "../buffer.h"
+#include "../server.h"
+
+struct ptychite_window *element_get_window(struct ptychite_element *element) {
+	assert(element->type == PTYCHITE_ELEMENT_WINDOW);
+
+	struct ptychite_window *window = wl_container_of(element, window, element);
+
+	return window;
+}
 
 static void window_handle_destroy(struct wl_listener *listener, void *data) {
 	struct ptychite_window *window = wl_container_of(listener, window, destroy);

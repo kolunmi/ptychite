@@ -5,6 +5,8 @@
 #include "../compositor.h"
 #include "../macros.h"
 #include "../draw.h"
+#include "../monitor.h"
+#include "../server.h"
 
 static const uint32_t ptychite_svg[] = {
 		1836597052,

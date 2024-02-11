@@ -1,9 +1,11 @@
 #ifndef PTYCHITE_WINDOWS_H
 #define PTYCHITE_WINDOWS_H
 
+#include <wlr/types/wlr_pointer.h>
 #include <cairo.h>
 
-#include "../server.h"
+#include "../util.h"
+#include "../element.h"
 
 struct ptychite_window {
 	struct ptychite_element element;
@@ -24,6 +26,8 @@ struct ptychite_window_impl {
 	void (*handle_pointer_leave)(struct ptychite_window *window);
 	void (*destroy)(struct ptychite_window *window);
 };
+
+struct ptychite_window *element_get_window(struct ptychite_element *element);
 
 int window_init(struct ptychite_window *window, struct ptychite_server *server, const struct ptychite_window_impl *impl,
 		struct wlr_scene_tree *parent, struct wlr_output *output);

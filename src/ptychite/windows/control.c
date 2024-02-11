@@ -3,6 +3,8 @@
 #include "../compositor.h"
 #include "../macros.h"
 #include "../draw.h"
+#include "../server.h"
+#include "../monitor.h"
 
 static void control_draw(struct ptychite_window *window, cairo_t *cairo, int surface_width, int surface_height, float scale) {
 	struct ptychite_control *control = wl_container_of(window, control, base);

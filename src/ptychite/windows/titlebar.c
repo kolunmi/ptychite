@@ -3,6 +3,7 @@
 #include "../compositor.h"
 #include "../macros.h"
 #include "../draw.h"
+#include "../view.h"
 
 static void title_bar_draw(struct ptychite_window *window, cairo_t *cairo, int surface_width, int surface_height, float scale) {
 	struct ptychite_title_bar *title_bar = wl_container_of(window, title_bar, base);

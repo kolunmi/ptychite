@@ -91,19 +91,31 @@ executable(
     # .h
     'src/ptychite/compositor.h',
     'src/ptychite/server.h',
+    'src/ptychite/message.h',
+    'src/ptychite/action.h',
+    'src/ptychite/monitor.h',
     'src/ptychite/buffer.h',
+    'src/ptychite/element.h',
+    'src/ptychite/view.h',
+    'src/ptychite/keyboard.h',
     'src/ptychite/draw.h',
     'src/ptychite/windows/windows.h',
     'src/ptychite/config.h',
     'src/ptychite/json.h',
     'src/ptychite/macros.h',
+    'src/ptychite/util.h',
 
     # .c
     'src/ptychite/ptychite.c',
     'src/ptychite/compositor.c',
     
     'src/ptychite/server.c',
+    'src/ptychite/message.c',
+    'src/ptychite/action.c',
+    'src/ptychite/monitor.c',
     'src/ptychite/buffer.c',
+    'src/ptychite/view.c',
+    'src/ptychite/keyboard.c',
     'src/ptychite/draw.c',
     
     'src/ptychite/windows/windows.c',
@@ -114,6 +126,7 @@ executable(
     
     'src/ptychite/config.c',
     'src/ptychite/json.c',
+    'src/ptychite/util.c',
   ],
   include_directories: [include_directories('.')],
   dependencies: [
