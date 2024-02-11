@@ -116,10 +116,4 @@ void ptychite_server_check_cursor(struct ptychite_server *server);
 
 void ptychite_server_execute_action(struct ptychite_server *server, struct ptychite_action *action);
 
-struct ptychite_action *ptychite_action_create(const char **args, int args_l, char **error);
-
-int ptychite_action_get_args(struct ptychite_action *action, char ***args_out, int *args_l_out);
-
-void ptychite_action_destroy(struct ptychite_action *action);
-
 #endif
