@@ -100,6 +100,7 @@ executable(
     'src/ptychite/keyboard.h',
     'src/ptychite/draw.h',
     'src/ptychite/windows.h',
+    'src/ptychite/chord.h',
     'src/ptychite/config.h',
     'src/ptychite/json.h',
     'src/ptychite/macros.h',
@@ -124,6 +125,7 @@ executable(
     'src/ptychite/windows/control.c',
     'src/ptychite/windows/titlebar.c',
     
+    'src/ptychite/chord.c',
     'src/ptychite/config.c',
     'src/ptychite/json.c',
     'src/ptychite/util.c',

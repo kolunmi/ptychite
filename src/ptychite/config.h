@@ -4,11 +4,11 @@
 #include <cairo.h>
 #include <pango/pangocairo.h>
 #include <stdbool.h>
-#include <stddef.h>
 #include <stdint.h>
 #include <wayland-util.h>
 
 #include "json.h"
+#include "chord.h"
 
 enum ptychite_property_set_mode {
 	PTYCHITE_PROPERTY_SET_OVERWRITE,
@@ -23,16 +23,6 @@ enum ptychite_wallpaper_mode {
 enum ptychite_tiling_mode {
 	PTYCHITE_TILING_NONE,
 	PTYCHITE_TILING_TRADITIONAL,
-};
-
-struct ptychite_key {
-	uint32_t modifiers;
-	uint32_t sym;
-};
-
-struct ptychite_chord {
-	struct ptychite_key *keys;
-	size_t keys_l;
 };
 
 struct ptychite_chord_binding {
@@ -133,11 +123,5 @@ int ptychite_config_set_property_from_file(struct ptychite_config *config, const
 
 char *ptychite_config_get_property(
 		struct ptychite_config *config, const char *path, enum ptychite_json_get_mode mode, char **error);
-
-int ptychite_chord_parse_pattern(struct ptychite_chord *chord, const char *pattern, char **error);
-
-void ptychite_chord_deinit(struct ptychite_chord *chord);
-
-char *ptychite_chord_get_pattern(struct ptychite_chord *chord);
 
 #endif

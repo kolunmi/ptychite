@@ -4,7 +4,6 @@
 #include <drm_fourcc.h>
 
 #include <linux/input-event-codes.h>
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
