@@ -2,7 +2,6 @@
 #include <assert.h>
 #include <cairo.h>
 #include <drm_fourcc.h>
-
 #include <linux/input-event-codes.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,13 +42,14 @@
 
 #include "compositor.h"
 #include "config.h"
-#include "macros.h"
-#include "server.h"
-#include "windows.h"
-#include "message.h"
-#include "view.h"
-#include "monitor.h"
+#include "dbus.h"
 #include "keyboard.h"
+#include "macros.h"
+#include "message.h"
+#include "monitor.h"
+#include "server.h"
+#include "view.h"
+#include "windows.h"
 
 static void server_activate_monitor(struct ptychite_server *server, struct ptychite_monitor *monitor) {
 	server->active_monitor = monitor;
@@ -442,7 +442,8 @@ static void server_handle_new_output(struct wl_listener *listener, void *data) {
 	}
 
 	if ((monitor->wallpaper = calloc(1, sizeof(struct ptychite_wallpaper)))) {
-		if (!ptychite_window_init(&monitor->wallpaper->base, server, &ptychite_wallpaper_window_impl, server->layers.bottom, output)) {
+		if (!ptychite_window_init(&monitor->wallpaper->base, server, &ptychite_wallpaper_window_impl,
+					server->layers.bottom, output)) {
 			monitor->wallpaper->monitor = monitor;
 		} else {
 			free(monitor->wallpaper);
@@ -451,7 +452,8 @@ static void server_handle_new_output(struct wl_listener *listener, void *data) {
 	}
 
 	if ((monitor->panel = calloc(1, sizeof(struct ptychite_panel)))) {
-		if (!ptychite_window_init(&monitor->panel->base, server, &ptychite_panel_window_impl, server->layers.bottom, output)) {
+		if (!ptychite_window_init(
+					&monitor->panel->base, server, &ptychite_panel_window_impl, server->layers.bottom, output)) {
 			monitor->panel->monitor = monitor;
 		} else {
 			free(monitor->panel);
@@ -502,7 +504,8 @@ static void server_handle_new_xdg_surface(struct wl_listener *listener, void *da
 	}
 
 	if ((view->title_bar = calloc(1, sizeof(struct ptychite_title_bar)))) {
-		if (!ptychite_window_init(&view->title_bar->base, server, &ptychite_title_bar_window_impl, view->element.scene_tree, NULL)) {
+		if (!ptychite_window_init(
+					&view->title_bar->base, server, &ptychite_title_bar_window_impl, view->element.scene_tree, NULL)) {
 			view->title_bar->view = view;
 			wlr_scene_node_set_enabled(&view->title_bar->base.element.scene_tree->node,
 					server->compositor->config->views.title_bar.enabled);
@@ -745,7 +748,8 @@ void ptychite_server_tiling_change_master_factor(struct ptychite_server *server,
 void ptychite_server_focus_any(struct ptychite_server *server) {
 	struct ptychite_monitor *monitor = server->active_monitor;
 	if (monitor && !wl_list_empty(&monitor->current_workspace->views_focus)) {
-		struct ptychite_view *view = wl_container_of(monitor->current_workspace->views_focus.next, view, workspace_focus_link);
+		struct ptychite_view *view =
+				wl_container_of(monitor->current_workspace->views_focus.next, view, workspace_focus_link);
 		ptychite_view_focus(view, view->xdg_toplevel->base->surface);
 	}
 }
@@ -898,7 +902,8 @@ int ptychite_server_init_and_run(struct ptychite_server *server, struct ptychite
 	if (!(server->control = calloc(1, sizeof(struct ptychite_control)))) {
 		return -1;
 	}
-	if (ptychite_window_init(&server->control->base, server, &ptychite_control_window_impl, server->layers.overlay, NULL)) {
+	if (ptychite_window_init(
+				&server->control->base, server, &ptychite_control_window_impl, server->layers.overlay, NULL)) {
 		return -1;
 	}
 	ptychite_control_hide(server->control);
@@ -919,6 +924,12 @@ int ptychite_server_init_and_run(struct ptychite_server *server, struct ptychite
 		wlr_backend_destroy(server->backend);
 		wl_display_destroy(server->display);
 		return -1;
+	}
+
+	if (!init_dbus(server)) {
+		wlr_log(WLR_INFO, "Successfully initialized dbus.");
+	} else {
+		wlr_log(WLR_ERROR, "Could not initialize dbus.");
 	}
 
 	setenv("WAYLAND_DISPLAY", socket, true);

@@ -1,11 +1,14 @@
 #ifndef PTYCHITE_SERVER_H
 #define PTYCHITE_SERVER_H
 
+#include <systemd/sd-bus.h>
 #include <wayland-server-core.h>
-#include <wlr/util/box.h>
+#include <wayland-util.h>
+
 #include <wlr/interfaces/wlr_buffer.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_xdg_shell.h>
+#include <wlr/util/box.h>
 
 struct ptychite_compositor;
 struct ptychite_server;
@@ -84,8 +87,15 @@ struct ptychite_server {
 	char panel_date[128];
 	struct ptychite_control *control;
 	const char *control_greeting;
-};
 
+	bool dbus_active;
+	sd_bus *bus;
+	sd_bus_slot *xdg_slot;
+
+	uint32_t last_id;
+	struct wl_list notifications;
+	struct wl_list history;
+};
 
 struct ptychite_view *ptychite_server_get_top_view(struct ptychite_server *server);
 struct ptychite_view *ptychite_server_get_front_view(struct ptychite_server *server);
@@ -94,9 +104,6 @@ struct ptychite_view *ptychite_server_get_focused_view(struct ptychite_server *s
 void ptychite_server_tiling_change_views_in_master(struct ptychite_server *server, int delta);
 void ptychite_server_tiling_change_master_factor(struct ptychite_server *server, double delta);
 void ptychite_server_focus_any(struct ptychite_server *server);
-
-
-
 
 struct ptychite_server *ptychite_server_create(void);
 

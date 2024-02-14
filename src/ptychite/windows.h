@@ -1,11 +1,13 @@
 #ifndef PTYCHITE_WINDOWS_H
 #define PTYCHITE_WINDOWS_H
 
-#include <wlr/types/wlr_pointer.h>
 #include <cairo.h>
 
-#include "util.h"
+#include <wlr/types/wlr_pointer.h>
+
 #include "element.h"
+#include "notification.h"
+#include "util.h"
 
 struct ptychite_window {
 	struct ptychite_element element;
@@ -29,8 +31,8 @@ struct ptychite_window_impl {
 
 struct ptychite_window *ptychite_element_get_window(struct ptychite_element *element);
 
-int ptychite_window_init(struct ptychite_window *window, struct ptychite_server *server, const struct ptychite_window_impl *impl,
-		struct wlr_scene_tree *parent, struct wlr_output *output);
+int ptychite_window_init(struct ptychite_window *window, struct ptychite_server *server,
+		const struct ptychite_window_impl *impl, struct wlr_scene_tree *parent, struct wlr_output *output);
 int ptychite_window_relay_draw(struct ptychite_window *window, int width, int height);
 void ptychite_window_relay_draw_same_size(struct ptychite_window *window);
 void ptychite_window_relay_pointer_enter(struct ptychite_window *window);
@@ -91,5 +93,36 @@ struct ptychite_title_bar {
 };
 
 extern const struct ptychite_window_impl ptychite_title_bar_window_impl;
+
+/* Notification */
+struct ptychite_notification {
+	struct wl_list link;
+	struct ptychite_server *server;
+
+	struct ptychite_icon *icon;
+
+	uint32_t id;
+	int group_index;
+	int group_count;
+	bool hidden;
+
+	bool markup_enabled;
+	char *app_name;
+	char *app_icon;
+	char *summary;
+	char *body;
+	int32_t requested_timeout;
+	bool actions_enabled;
+	struct wl_list actions; // ptychite_action::link
+
+	enum ptychite_notification_urgency urgency;
+	char *category;
+	char *desktop_entry;
+	char *tag;
+	int32_t progress;
+	struct ptychite_image_data *image_data;
+
+	struct wl_event_source *timer;
+};
 
 #endif

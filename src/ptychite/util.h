@@ -8,8 +8,11 @@ struct ptychite_mouse_region {
 	bool entered;
 };
 
+char *ptychite_asprintf(const char *fmt, ...);
+
 bool ptychite_mouse_region_update_state(struct ptychite_mouse_region *region, double x, double y);
 
 void ptychite_spawn(char **args);
+
 
 #endif

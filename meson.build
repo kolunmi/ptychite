@@ -29,6 +29,7 @@ cairo          = dependency('cairo')
 pango          = dependency('pango')
 pangocairo     = dependency('pangocairo')
 librsvg        = dependency('librsvg-2.0')
+sdbus          = dependency('libsystemd')
 # libup          = dependency('upower-glib')
 # libnm          = dependency('libnm')
 math           = cc.find_library('m')
@@ -102,6 +103,9 @@ executable(
     'src/ptychite/windows.h',
     'src/ptychite/chord.h',
     'src/ptychite/config.h',
+    'src/ptychite/dbus.h',
+    'src/ptychite/icon.h',
+    'src/ptychite/notification.h',
     'src/ptychite/json.h',
     'src/ptychite/macros.h',
     'src/ptychite/util.h',
@@ -109,7 +113,6 @@ executable(
     # .c
     'src/ptychite/ptychite.c',
     'src/ptychite/compositor.c',
-    
     'src/ptychite/server.c',
     'src/ptychite/message.c',
     'src/ptychite/action.c',
@@ -119,16 +122,21 @@ executable(
     'src/ptychite/keyboard.c',
     'src/ptychite/draw.c',
     'src/ptychite/windows.c',
+    'src/ptychite/chord.c',
+    'src/ptychite/config.c',
+    'src/ptychite/dbus.c',
+    'src/ptychite/icon.c',
+    'src/ptychite/notification.c',
+    'src/ptychite/json.c',
+    'src/ptychite/util.c',
     
     'src/ptychite/windows/wallpaper.c',
     'src/ptychite/windows/panel.c',
     'src/ptychite/windows/control.c',
     'src/ptychite/windows/titlebar.c',
-    
-    'src/ptychite/chord.c',
-    'src/ptychite/config.c',
-    'src/ptychite/json.c',
-    'src/ptychite/util.c',
+    'src/ptychite/windows/notification.c',
+
+    'src/ptychite/dbus/xdg_notification.c',
   ],
   include_directories: [include_directories('.')],
   dependencies: [
@@ -141,10 +149,12 @@ executable(
     pango,
     pangocairo,
     librsvg,
+    sdbus,
     # libup,
     # libnm,
     math,
   ],
+  install: true,
 )
 
 executable(
@@ -158,4 +168,5 @@ executable(
     wayland_client,
     json,
   ],
+  install: true,
 )
