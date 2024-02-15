@@ -96,6 +96,8 @@ extern const struct ptychite_window_impl ptychite_title_bar_window_impl;
 
 /* Notification */
 struct ptychite_notification {
+	struct ptychite_window base;
+  
 	struct wl_list link;
 	struct ptychite_server *server;
 

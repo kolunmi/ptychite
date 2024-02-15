@@ -106,6 +106,7 @@ executable(
     'src/ptychite/dbus.h',
     'src/ptychite/icon.h',
     'src/ptychite/notification.h',
+    'src/ptychite/applications.h',
     'src/ptychite/json.h',
     'src/ptychite/macros.h',
     'src/ptychite/util.h',
@@ -127,6 +128,7 @@ executable(
     'src/ptychite/dbus.c',
     'src/ptychite/icon.c',
     'src/ptychite/notification.c',
+    'src/ptychite/applications.c',
     'src/ptychite/json.c',
     'src/ptychite/util.c',
     

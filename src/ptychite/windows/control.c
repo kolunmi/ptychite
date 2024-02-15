@@ -1,11 +1,14 @@
-#include "../windows.h"
-#include "../config.h"
 #include "../compositor.h"
+#include "../config.h"
 #include "../draw.h"
-#include "../server.h"
 #include "../monitor.h"
+#include "../server.h"
+#include "../windows.h"
+#include "../icon.h"
+#include "../util.h"
 
-static void control_draw(struct ptychite_window *window, cairo_t *cairo, int surface_width, int surface_height, float scale) {
+static void control_draw(
+		struct ptychite_window *window, cairo_t *cairo, int surface_width, int surface_height, float scale) {
 	struct ptychite_control *control = wl_container_of(window, control, base);
 
 	struct wlr_box box = {
@@ -42,8 +45,8 @@ static void control_draw(struct ptychite_window *window, cairo_t *cairo, int sur
 
 	if (server->control_greeting) {
 		int height;
-		if (!ptychite_cairo_draw_text_center(cairo, y, box.x, box.width, NULL, font->font, server->control_greeting, gray2, NULL,
-					scale * 0.8, false, NULL, &height)) {
+		if (!ptychite_cairo_draw_text_center(cairo, y, box.x, box.width, NULL, font->font, server->control_greeting,
+					gray2, NULL, scale * 0.8, false, NULL, &height)) {
 			y += height + rect_radius;
 			cairo_move_to(cairo, box.x, y);
 			cairo_line_to(cairo, box.x + box.width, y);
@@ -55,12 +58,27 @@ static void control_draw(struct ptychite_window *window, cairo_t *cairo, int sur
 	}
 
 	int font_height = font->height * scale;
-	size_t i;
-	for (i = 0; i < 4; i++) {
-		ptychite_cairo_draw_rounded_rect(cairo, box.x, y, box.width, font_height * 3, font_height);
-		cairo_set_source_rgba(cairo, gray1[0], gray1[1], gray1[2], gray1[3]);
-		cairo_fill(cairo);
-		y += font_height * 3 + rect_radius;
+
+	int x = 0;
+	struct ptychite_hash_table_entry *entry;
+	for (uint32_t i = 0; i < server->icons.table.allocated; i++) {
+		entry = server->icons.table.entries + i;
+		if (!ptychite_hash_table_entry_is_filled(entry) || ptychite_hash_table_entry_is_deleted(entry)) {
+			continue;
+		}
+		struct ptychite_icon *icon = entry->data;
+
+		if (x + icon->width > surface_width) {
+			x = 0;
+			y += 64;
+		}
+
+		if (y > surface_height) {
+			break;
+		}
+
+		draw_icon(cairo, icon, x, y, 1);
+		x += icon->width;
 	}
 }
 

@@ -113,7 +113,7 @@ static int handle_notify(sd_bus_message *msg, void *data, sd_bus_error *ret_erro
 	notif->summary = strdup(summary);
 	notif->body = strdup(body);
 
-	wlr_log(WLR_INFO, "Notification recieved from %s: '%s'", app_name, summary);
+	wlr_log(WLR_INFO, "Notification received from %s: '%s'", app_name, app_icon);
 
 	ret = sd_bus_message_enter_container(msg, 'a', "s");
 	if (ret < 0) {
@@ -365,7 +365,7 @@ static int handle_notify(sd_bus_message *msg, void *data, sd_bus_error *ret_erro
 				wl_event_loop_add_timer(wl_display_get_event_loop(server->display), handle_notification_timer, notif);
 	}
 
-	notif->icon = create_icon(notif);
+	notif->icon = ptychite_icon_create_for_notification(notif);
 
 	/* set_dirty(notif->surface); */
 

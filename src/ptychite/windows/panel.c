@@ -1,12 +1,15 @@
 #include <librsvg/rsvg.h>
 
-#include "../windows.h"
-#include "../config.h"
 #include "../compositor.h"
-#include "../macros.h"
+#include "../config.h"
 #include "../draw.h"
+#include "../icon.h"
+#include "../macros.h"
 #include "../monitor.h"
 #include "../server.h"
+#include "../util.h"
+#include "../view.h"
+#include "../windows.h"
 
 static const uint32_t ptychite_svg[] = {
 		1836597052,
@@ -243,7 +246,8 @@ static const uint32_t ptychite_svg[] = {
 		171861878,
 };
 
-static void panel_draw(struct ptychite_window *window, cairo_t *cairo, int surface_width, int surface_height, float scale) {
+static void panel_draw(
+		struct ptychite_window *window, cairo_t *cairo, int surface_width, int surface_height, float scale) {
 	struct ptychite_panel *panel = wl_container_of(window, panel, base);
 
 	struct ptychite_server *server = panel->monitor->server;
@@ -295,6 +299,15 @@ static void panel_draw(struct ptychite_window *window, cairo_t *cairo, int surfa
 		g_error_free(error);
 	}
 
+	struct ptychite_view *view = ptychite_server_get_focused_view(server);
+	if (view) {
+		struct ptychite_icon *icon = ptychite_hash_map_get(&server->icons, view->xdg_toplevel->app_id);
+		if (icon) {
+			draw_icon(cairo, icon, x, 0, 1);
+			x += icon->width + font_height;
+		}
+	}
+
 	struct ptychite_workspace *workspace;
 	wl_list_for_each(workspace, &panel->monitor->workspaces, link) {
 		workspace->region.box = (struct wlr_box){
@@ -325,8 +338,8 @@ static void panel_draw(struct ptychite_window *window, cairo_t *cairo, int surfa
 		};
 		char *chord_string = ptychite_chord_get_pattern(&chord);
 		if (chord_string) {
-			ptychite_cairo_draw_text_right(cairo, y, surface_width - font_height, NULL, font->font, chord_string, foreground,
-					chord_color, scale, false, NULL, NULL);
+			ptychite_cairo_draw_text_right(cairo, y, surface_width - font_height, NULL, font->font, chord_string,
+					foreground, chord_color, scale, false, NULL, NULL);
 			free(chord_string);
 		}
 	}
@@ -338,8 +351,8 @@ static void panel_draw(struct ptychite_window *window, cairo_t *cairo, int surfa
 				? accent
 				: NULL;
 		int width;
-		if (!ptychite_cairo_draw_text_center(cairo, y, 0, surface_width, &x, font->font, server->panel_date, foreground, bg,
-					scale, false, &width, NULL)) {
+		if (!ptychite_cairo_draw_text_center(cairo, y, 0, surface_width, &x, font->font, server->panel_date, foreground,
+					bg, scale, false, &width, NULL)) {
 			panel->regions.time.box = (struct wlr_box){
 					.x = x,
 					.y = 0,

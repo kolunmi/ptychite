@@ -50,6 +50,8 @@
 #include "server.h"
 #include "view.h"
 #include "windows.h"
+#include "applications.h"
+#include "util.h"
 
 static void server_activate_monitor(struct ptychite_server *server, struct ptychite_monitor *monitor) {
 	server->active_monitor = monitor;
@@ -760,8 +762,11 @@ struct ptychite_server *ptychite_server_create(void) {
 
 int ptychite_server_init_and_run(struct ptychite_server *server, struct ptychite_compositor *compositor) {
 	server->compositor = compositor;
-	wl_array_init(&server->keys);
 	server->terminated = false;
+	
+	wl_array_init(&server->keys);
+	ptychite_hash_map_init(&server->applications, ptychite_murmur3_string_hash);
+	ptychite_hash_map_init(&server->icons, ptychite_murmur3_string_hash);
 
 	if (!(server->display = wl_display_create())) {
 		return -1;
@@ -931,6 +936,9 @@ int ptychite_server_init_and_run(struct ptychite_server *server, struct ptychite
 	} else {
 		wlr_log(WLR_ERROR, "Could not initialize dbus.");
 	}
+
+	wlr_log(WLR_INFO, "Getting applications.");
+	read_applications(server);
 
 	setenv("WAYLAND_DISPLAY", socket, true);
 
