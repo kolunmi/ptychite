@@ -122,20 +122,19 @@ void read_applications(struct ptychite_server *server) {
 		}
 
 		app->df = strdup(path);
+
 		int df_basename_c = d_name_l + 1 - strlen(".desktop");
-		if ((app->df_basename = malloc(df_basename_c))) {
-			snprintf(app->df_basename, df_basename_c, "%s", entry->d_name);
+		if (!(app->df_basename = malloc(df_basename_c))) {
+			destroy_application(app);
+			continue;
 		}
+		snprintf(app->df_basename, df_basename_c, "%s", entry->d_name);
 
 		if (app->icon) {
 			ptychite_icon_create(server, app->icon, &app->resolved_icon);
 		}
-		
-		if (app->wmclass) {
-			if (!ptychite_hash_map_insert(&server->applications, app->wmclass, app)) {
-				destroy_application(app);
-				continue;
-			}
+
+		if (app->wmclass && ptychite_hash_map_insert(&server->applications, app->wmclass, app)) {
 			app->refs++;
 		}
 
