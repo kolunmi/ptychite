@@ -3,6 +3,7 @@
 
 #include <cairo.h>
 #include <stdint.h>
+#include <wlr/util/box.h>
 
 struct ptychite_server;
 struct ptychite_notification;
@@ -24,11 +25,10 @@ struct ptychite_image_data {
 	uint8_t *data;
 };
 
-struct ptychite_icon *ptychite_icon_create(struct ptychite_server *server, char *name);
+struct ptychite_icon *ptychite_icon_create(struct ptychite_server *server, char *name, char **path_out);
 struct ptychite_icon *ptychite_icon_create_for_notification(struct ptychite_notification *notif);
 
 void destroy_icon(struct ptychite_icon *icon);
-void draw_icon(cairo_t *cairo, struct ptychite_icon *icon,
-		double xpos, double ypos, double scale);
+void draw_icon(cairo_t *cairo, struct ptychite_icon *icon, struct wlr_box box);
 
 #endif

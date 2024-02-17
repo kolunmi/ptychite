@@ -9,11 +9,21 @@
 #include "server.h"
 #include "util.h"
 
-void destroy_application(struct ptychite_application *app) {
+static void destroy_application(struct ptychite_application *app) {
 	free(app->name);
+	free(app->df);
+	free(app->df_basename);
 	free(app->wmclass);
 	free(app->icon);
+	free(app->resolved_icon);
 	free(app);
+}
+
+void ptychite_application_unref(struct ptychite_application *app) {
+	app->refs--;
+	if (app->refs <= 0) {
+		destroy_application(app);
+	}
 }
 
 void read_applications(struct ptychite_server *server) {
@@ -48,11 +58,24 @@ void read_applications(struct ptychite_server *server) {
 			fclose(desktop_file);
 			continue;
 		}
+		app->refs = 1;
 
 		bool valid = false;
+		bool in_entry = false;
+
 		char buf[BUFSIZ];
 		while (fgets(buf, sizeof(buf), desktop_file)) {
 			if (buf[0] == '[') {
+				if (in_entry) {
+					break;
+				}
+				if (!strcmp(buf, "[Desktop Entry]\n")) {
+					in_entry = true;
+				}
+				continue;
+			}
+
+			if (!in_entry) {
 				continue;
 			}
 
@@ -93,19 +116,31 @@ void read_applications(struct ptychite_server *server) {
 
 		fclose(desktop_file);
 
-		if (valid) {
-			if (ptychite_hash_map_insert(&server->applications, app->wmclass ? app->wmclass : app->name, app)) {
-				if (app->icon && !ptychite_hash_map_get(&server->icons, app->icon)) {
-					struct ptychite_icon *icon = ptychite_icon_create(server, app->icon);
-					if (icon) {
-						ptychite_hash_map_insert(&server->icons, app->icon, icon);
-					}
-				}
-			} else {
-				destroy_application(app);
-			}
-		} else {
+		if (!valid) {
 			destroy_application(app);
+			continue;
+		}
+
+		app->df = strdup(path);
+		int df_basename_c = d_name_l + 1 - strlen(".desktop");
+		if ((app->df_basename = malloc(df_basename_c))) {
+			snprintf(app->df_basename, df_basename_c, "%s", entry->d_name);
+		}
+
+		if (app->icon) {
+			ptychite_icon_create(server, app->icon, &app->resolved_icon);
+		}
+		
+		if (app->wmclass) {
+			if (!ptychite_hash_map_insert(&server->applications, app->wmclass, app)) {
+				destroy_application(app);
+				continue;
+			}
+			app->refs++;
+		}
+
+		if (!ptychite_hash_map_insert(&server->applications, app->df_basename, app)) {
+			ptychite_application_unref(app);
 		}
 	}
 

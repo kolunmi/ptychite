@@ -1,11 +1,11 @@
 #include "../compositor.h"
 #include "../config.h"
 #include "../draw.h"
+#include "../icon.h"
 #include "../monitor.h"
 #include "../server.h"
-#include "../windows.h"
-#include "../icon.h"
 #include "../util.h"
+#include "../windows.h"
 
 static void control_draw(
 		struct ptychite_window *window, cairo_t *cairo, int surface_width, int surface_height, float scale) {
@@ -68,7 +68,7 @@ static void control_draw(
 		}
 		struct ptychite_icon *icon = entry->data;
 
-		if (x + icon->width > surface_width) {
+		if (x + 64 > surface_width) {
 			x = 0;
 			y += 64;
 		}
@@ -77,8 +77,15 @@ static void control_draw(
 			break;
 		}
 
-		draw_icon(cairo, icon, x, y, 1);
-		x += icon->width;
+		struct wlr_box box = {
+				.x = x,
+				.y = y,
+				.width = 64,
+				.height = 64,
+		};
+
+		draw_icon(cairo, icon, box);
+		x += box.width;
 	}
 }
 

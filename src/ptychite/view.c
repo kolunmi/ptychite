@@ -1,12 +1,15 @@
-#include <wlr/types/wlr_cursor.h>
 #include <assert.h>
 
-#include "view.h"
-#include "config.h"
-#include "server.h"
-#include "windows.h"
+#include <wlr/types/wlr_cursor.h>
+
+#include "applications.h"
 #include "compositor.h"
+#include "config.h"
+#include "icon.h"
 #include "monitor.h"
+#include "server.h"
+#include "view.h"
+#include "windows.h"
 
 struct ptychite_view *ptychite_element_get_view(struct ptychite_element *element) {
 	assert(element->type == PTYCHITE_ELEMENT_VIEW);
@@ -135,6 +138,14 @@ void ptychite_view_focus(struct ptychite_view *view, struct wlr_surface *surface
 		wlr_seat_keyboard_notify_enter(seat, view->xdg_toplevel->base->surface, keyboard->keycodes,
 				keyboard->num_keycodes, &keyboard->modifiers);
 	}
+
+	struct ptychite_monitor *monitor;
+	wl_list_for_each(monitor, &view->server->monitors, link) {
+		if (!monitor->panel) {
+			continue;
+		}
+		ptychite_panel_draw_auto(monitor->panel);
+	}
 }
 
 void ptychite_view_begin_interactive(struct ptychite_view *view, enum ptychite_cursor_mode mode) {
@@ -247,6 +258,14 @@ static void view_handle_unmap(struct wl_listener *listener, void *data) {
 			struct ptychite_view *new_view =
 					wl_container_of(view->monitor->current_workspace->views_focus.next, new_view, workspace_focus_link);
 			ptychite_view_focus(new_view, new_view->xdg_toplevel->base->surface);
+		} else {
+			struct ptychite_monitor *monitor;
+			wl_list_for_each(monitor, &view->server->monitors, link) {
+				if (!monitor->panel) {
+					continue;
+				}
+				ptychite_panel_draw_auto(monitor->panel);
+			}
 		}
 	}
 }
@@ -278,7 +297,7 @@ static void view_handle_request_fullscreen(struct wl_listener *listener, void *d
 }
 
 void ptychite_view_rig(struct ptychite_view *view, struct wlr_xdg_surface *xdg_surface) {
-  	view->map.notify = view_handle_map;
+	view->map.notify = view_handle_map;
 	wl_signal_add(&xdg_surface->surface->events.map, &view->map);
 	view->unmap.notify = view_handle_unmap;
 	wl_signal_add(&xdg_surface->surface->events.unmap, &view->unmap);
@@ -292,3 +311,12 @@ void ptychite_view_rig(struct ptychite_view *view, struct wlr_xdg_surface *xdg_s
 	wl_signal_add(&toplevel->events.request_fullscreen, &view->request_fullscreen);
 }
 
+struct ptychite_icon *ptychite_view_get_icon(struct ptychite_view *view) {
+	struct ptychite_application *application =
+			ptychite_hash_map_get(&view->server->applications, view->xdg_toplevel->app_id);
+	if (!application) {
+		return NULL;
+	}
+
+	return ptychite_hash_map_get(&view->server->icons, application->resolved_icon);
+}

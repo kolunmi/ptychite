@@ -4,6 +4,8 @@
 #include "server.h"
 #include "element.h"
 
+struct ptychite_icon;
+
 struct ptychite_view {
 	struct ptychite_element element;
 	struct wl_list server_link;
@@ -45,5 +47,7 @@ void ptychite_surface_unfocus(struct wlr_surface *surface);
 void ptychite_view_focus(struct ptychite_view *view, struct wlr_surface *surface);
 void ptychite_view_begin_interactive(struct ptychite_view *view, enum ptychite_cursor_mode mode);
 void ptychite_view_rig(struct ptychite_view *view, struct wlr_xdg_surface *xdg_surface);
+
+struct ptychite_icon *ptychite_view_get_icon(struct ptychite_view *view);
 
 #endif

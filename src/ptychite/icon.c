@@ -196,6 +196,8 @@ static void url_decode(char *dst, const char *src) {
 // Returns the resolved path, or NULL if it was unable to find an icon. The
 // return value must be freed by the caller.
 static char *resolve_icon(char *name, int32_t max_scale) {
+	// TODO: make the function less horrible
+
 	if (name[0] == '\0') {
 		return NULL;
 	}
@@ -212,32 +214,36 @@ static char *resolve_icon(char *name, int32_t max_scale) {
 		url_decode(icon_path, name + strlen("file://"));
 		return icon_path;
 	}
-
-	static const char fallback[] = ":/usr/share/icons/hicolor";
-	char *search = ptychite_asprintf(fallback);
-
-	char *saveptr = NULL;
-	char *theme_path = strtok_r(search, ":", &saveptr);
-
-	// Match all icon files underneath of the theme_path followed by any icon
-	// size and category subdirectories. This pattern assumes that all the
-	// files in the icon path are valid icon types.
-	static const char pattern_fmt[] = "%s/*/*/%s.*";
-
-	char *icon_path = NULL;
-	int32_t last_icon_size = 0;
-
 	if (!validate_icon_name(name)) {
 		return NULL;
 	}
 
+	static const char fallback[] = "%s";
+	const char *xdg_data_dirs = getenv("XDG_DATA_DIRS");
+	char *search = ptychite_asprintf(fallback, xdg_data_dirs);
+	if (!search) {
+		return NULL;
+	}
+
+	char *saveptr = NULL;
+	char *theme_path = strtok_r(search, ":", &saveptr);
+
+	// Match scalable icons first
+	static const char pattern_fmt_scal[] = "%s/icons/hicolor/scalable/*/%s.svg";
+
+	char *icon_path = NULL;
+
 	while (theme_path) {
-		if (strlen(theme_path) == 0) {
+		int theme_path_l = strlen(theme_path);
+		if (theme_path_l == 0) {
 			continue;
+		}
+		if (theme_path[theme_path_l - 1] == '/') {
+			theme_path[theme_path_l - 1] = '\0';
 		}
 
 		glob_t icon_glob = {0};
-		char *pattern = ptychite_asprintf(pattern_fmt, theme_path, name);
+		char *pattern = ptychite_asprintf(pattern_fmt_scal, theme_path, name);
 
 		// Disable sorting because we're going to do our own anyway.
 		int found = glob(pattern, GLOB_NOSORT, NULL, &icon_glob);
@@ -259,53 +265,121 @@ static char *resolve_icon(char *name, int32_t max_scale) {
 				++relative_path;
 			}
 
-			errno = 0;
-			int32_t icon_size = strtol(relative_path, NULL, 10);
-			if (errno || icon_size == 0) {
-				// Try second level subdirectory if failed.
-				errno = 0;
-				while (relative_path[0] != '/') {
-					++relative_path;
-				}
-				++relative_path;
-				icon_size = strtol(relative_path, NULL, 10);
-				if (errno || icon_size == 0) {
-					continue;
-				}
-			}
-
-			int32_t icon_scale = 1;
-			char *scale_str = strchr(relative_path, '@');
-			if (scale_str != NULL) {
-				icon_scale = strtol(scale_str + 1, NULL, 10);
-			}
-
-			if (icon_size == 64 && icon_scale == max_scale) {
-				// If we find an exact match, we're done.
-				free(icon_path);
-				icon_path = strdup(icon_glob.gl_pathv[i]);
-				break;
-			} else if (icon_size < 64 * max_scale && icon_size > last_icon_size) {
-				// Otherwise, if this icon is small enough to fit but bigger
-				// than the last best match, choose it on a provisional basis.
-				// We multiply by max_scale to increase the odds of finding an
-				// icon which looks sharp on the highest-scale output.
-				free(icon_path);
-				icon_path = strdup(icon_glob.gl_pathv[i]);
-				last_icon_size = icon_size;
-			}
+			icon_path = strdup(icon_glob.gl_pathv[i]);
+			break;
 		}
 
 		free(pattern);
 		globfree(&icon_glob);
 
 		if (icon_path) {
-			// The spec says that if we find any match whatsoever in a theme,
-			// we should stop there to avoid mixing icons from different
-			// themes even if one is a better size.
 			break;
 		}
 		theme_path = strtok_r(NULL, ":", &saveptr);
+	}
+
+	free(search);
+
+	if (!icon_path) {
+		search = ptychite_asprintf(fallback, xdg_data_dirs);
+		if (!search) {
+			return NULL;
+		}
+
+		saveptr = NULL;
+		theme_path = strtok_r(search, ":", &saveptr);
+
+		// Match all icon files underneath of the theme_path followed by any icon
+		// size and category subdirectories. This pattern assumes that all the
+		// files in the icon path are valid icon types.
+		static const char pattern_fmt[] = "%s/icons/hicolor/*/*/%s.*";
+
+		int32_t last_icon_size = 0;
+		static const int max_size = 512;
+
+		while (theme_path) {
+			int theme_path_l = strlen(theme_path);
+			if (theme_path_l == 0) {
+				continue;
+			}
+			if (theme_path[theme_path_l - 1] == '/') {
+				theme_path[theme_path_l - 1] = '\0';
+			}
+
+			glob_t icon_glob = {0};
+			char *pattern = ptychite_asprintf(pattern_fmt, theme_path, name);
+
+			// Disable sorting because we're going to do our own anyway.
+			int found = glob(pattern, GLOB_NOSORT, NULL, &icon_glob);
+			size_t found_count = 0;
+			if (found == 0) {
+				// The value of gl_pathc isn't guaranteed to be usable if glob
+				// returns non-zero.
+				found_count = icon_glob.gl_pathc;
+			}
+
+			for (size_t i = 0; i < found_count; ++i) {
+				char *relative_path = icon_glob.gl_pathv[i];
+
+				// Find the end of the current search path and walk to the next
+				// path component. Hopefully this will be the icon resolution
+				// subdirectory.
+				relative_path += strlen(theme_path);
+				while (relative_path[0] == '/') {
+					++relative_path;
+				}
+				relative_path += strlen("icons/hicolor/");
+
+				errno = 0;
+				int32_t icon_size = strtol(relative_path, NULL, 10);
+				if (errno || icon_size == 0) {
+					// Try second level subdirectory if failed.
+					errno = 0;
+					while (relative_path[0] != '/') {
+						++relative_path;
+					}
+					++relative_path;
+					icon_size = strtol(relative_path, NULL, 10);
+					if (errno || icon_size == 0) {
+						continue;
+					}
+				}
+
+				int32_t icon_scale = 1;
+				char *scale_str = strchr(relative_path, '@');
+				if (scale_str != NULL) {
+					icon_scale = strtol(scale_str + 1, NULL, 10);
+				}
+
+				if (icon_size == max_size && icon_scale == max_scale) {
+					// If we find an exact match, we're done.
+					free(icon_path);
+					icon_path = strdup(icon_glob.gl_pathv[i]);
+					break;
+				} else if (icon_size < max_size * max_scale && icon_size > last_icon_size) {
+					// Otherwise, if this icon is small enough to fit but bigger
+					// than the last best match, choose it on a provisional basis.
+					// We multiply by max_scale to increase the odds of finding an
+					// icon which looks sharp on the highest-scale output.
+					free(icon_path);
+					icon_path = strdup(icon_glob.gl_pathv[i]);
+					last_icon_size = icon_size;
+				}
+			}
+
+			free(pattern);
+			globfree(&icon_glob);
+
+			if (icon_path) {
+				// The spec says that if we find any match whatsoever in a theme,
+				// we should stop there to avoid mixing icons from different
+				// themes even if one is a better size.
+				break;
+			}
+			theme_path = strtok_r(NULL, ":", &saveptr);
+		}
+
+		free(search);
 	}
 
 	if (icon_path == NULL) {
@@ -326,7 +400,6 @@ static char *resolve_icon(char *name, int32_t max_scale) {
 		globfree(&icon_glob);
 	}
 
-	free(search);
 	return icon_path;
 }
 
@@ -353,7 +426,7 @@ static struct ptychite_icon *icon_from_gdk_pixbuf_consume(GdkPixbuf *image) {
 	return icon;
 }
 
-struct ptychite_icon *ptychite_icon_create(struct ptychite_server *server, char *name) {
+struct ptychite_icon *ptychite_icon_create(struct ptychite_server *server, char *name, char **path_out) {
 	// Determine the largest scale factor of any attached output.
 	int32_t max_scale = 1;
 	struct ptychite_monitor *monitor;
@@ -364,17 +437,46 @@ struct ptychite_icon *ptychite_icon_create(struct ptychite_server *server, char 
 	}
 
 	char *path = resolve_icon(name, max_scale);
-	if (path == NULL) {
+	if (!path) {
 		return NULL;
+	}
+
+	struct ptychite_icon *cache = ptychite_hash_map_get(&server->icons, path);
+	if (cache) {
+		if (path_out) {
+			*path_out = path;
+		} else {
+			free(path);
+		}
+		return cache;
 	}
 
 	GdkPixbuf *image = load_image(path);
-	free(path);
-	if (image == NULL) {
+	if (!image) {
+		free(path);
 		return NULL;
 	}
 
-	return icon_from_gdk_pixbuf_consume(image);
+	struct ptychite_icon *icon = icon_from_gdk_pixbuf_consume(image);
+	if (!icon) {
+		free(path);
+		return NULL;
+	}
+
+	bool rv = ptychite_hash_map_insert(&server->icons, path, icon);
+	if (!rv) {
+		free(path);
+		destroy_icon(icon);
+		return NULL;
+	}
+
+	if (path_out) {
+		*path_out = path;
+	} else {
+		free(path);
+	}
+
+	return icon;
 }
 
 struct ptychite_icon *ptychite_icon_create_for_notification(struct ptychite_notification *notif) {
@@ -384,16 +486,18 @@ struct ptychite_icon *ptychite_icon_create_for_notification(struct ptychite_noti
 	}
 
 	if (!image) {
-		return ptychite_icon_create(notif->server, notif->app_icon);
+		return ptychite_icon_create(notif->server, notif->app_icon, NULL);
 	}
 
 	return icon_from_gdk_pixbuf_consume(image);
 }
 
-void draw_icon(cairo_t *cairo, struct ptychite_icon *icon, double xpos, double ypos, double scale) {
+void draw_icon(cairo_t *cairo, struct ptychite_icon *icon, struct wlr_box box) {
 	cairo_save(cairo);
-	cairo_scale(cairo, scale * icon->scale, scale * icon->scale);
-	cairo_set_source_surface(cairo, icon->image, xpos / icon->scale, ypos / icon->scale);
+	double scale_x = icon->scale * ((double)box.width / icon->width);
+	double scale_y = icon->scale * ((double)box.height / icon->height);
+	cairo_scale(cairo, scale_x, scale_y);
+	cairo_set_source_surface(cairo, icon->image, box.x / scale_x, box.y / scale_y);
 	cairo_paint(cairo);
 	cairo_restore(cairo);
 }

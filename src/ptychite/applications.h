@@ -5,8 +5,13 @@ struct ptychite_server;
 
 struct ptychite_application {
 	char *name;
+	char *df;
+	char *df_basename;
 	char *wmclass;
-  char *icon;
+	char *icon;
+	char *resolved_icon;
+
+	int refs;
 };
 
 void read_applications(struct ptychite_server *server);

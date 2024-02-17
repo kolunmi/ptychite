@@ -10,6 +10,7 @@
 #include "../util.h"
 #include "../view.h"
 #include "../windows.h"
+#include "src/ptychite/applications.h"
 
 static const uint32_t ptychite_svg[] = {
 		1836597052,
@@ -299,14 +300,28 @@ static void panel_draw(
 		g_error_free(error);
 	}
 
-	struct ptychite_view *view = ptychite_server_get_focused_view(server);
-	if (view) {
-		struct ptychite_icon *icon = ptychite_hash_map_get(&server->icons, view->xdg_toplevel->app_id);
-		if (icon) {
-			draw_icon(cairo, icon, x, 0, 1);
-			x += icon->width + font_height;
+	do {
+		struct ptychite_view *view = ptychite_server_get_focused_view(server);
+		if (!view) {
+			break;
 		}
-	}
+
+		struct ptychite_icon *icon = ptychite_view_get_icon(view);
+		if (!icon) {
+			break;
+		}
+
+		int size = surface_height - y * 2;
+		struct wlr_box box = {
+				.x = x,
+				.y = y,
+				.width = size,
+				.height = size,
+		};
+		draw_icon(cairo, icon, box);
+
+		x += box.width + font_height;
+	} while (0);
 
 	struct ptychite_workspace *workspace;
 	wl_list_for_each(workspace, &panel->monitor->workspaces, link) {
