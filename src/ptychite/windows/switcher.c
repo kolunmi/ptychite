@@ -22,7 +22,8 @@ static void switcher_draw(
 	float *gray1 = config->panel.colors.gray1;
 	struct ptychite_font *font = &config->panel.font;
 
-	ptychite_cairo_draw_rounded_rect(cairo, 10, 10, surface_width - 20, surface_height - 20, 10);
+	ptychite_cairo_draw_rounded_rect(
+			cairo, 10 * scale, 10 * scale, surface_width - 20 * scale, surface_height - 20 * scale, 10 * scale);
 	cairo_set_source_rgba(cairo, accent[0], accent[1], accent[2], accent[3]);
 	cairo_fill_preserve(cairo);
 	cairo_set_source_rgba(cairo, border[0], border[1], border[2], border[3]);
@@ -40,23 +41,24 @@ static void switcher_draw(
 		}
 
 		struct wlr_box box = {
-				.x = x,
-				.y = 30,
-				.width = 64,
-				.height = 64,
+				.x = x * scale,
+				.y = 30 * scale,
+				.width = 64 * scale,
+				.height = 64 * scale,
 		};
 
 		if (i == switcher->idx) {
-			ptychite_cairo_draw_rounded_rect(cairo, box.x - 10, box.y - 10, box.width + 20, box.height + 45, 5);
+			ptychite_cairo_draw_rounded_rect(cairo, box.x - 10 * scale, box.y - 10 * scale, box.width + 20 * scale,
+					box.height + 45 * scale, 5 * scale);
 			cairo_set_source_rgba(cairo, gray1[0], gray1[1], gray1[2], gray1[3]);
 			cairo_fill(cairo);
 		}
 
 		draw_icon(cairo, icon, box);
-		ptychite_cairo_draw_text_center(cairo, box.y + box.height + 5, x, 64, NULL, font->font, sapp->app->name,
-				foreground, NULL, scale * 0.6, false, NULL, NULL);
+		ptychite_cairo_draw_text_center(cairo, box.y + box.height + 5 * scale, box.x, box.width, NULL, font->font,
+				sapp->app->name, foreground, NULL, scale * 0.6, false, NULL, NULL);
 
-		x += (64 + 30);
+		x += 64 + 30;
 		i++;
 	}
 }
@@ -131,6 +133,7 @@ void ptychite_switcher_draw_auto(struct ptychite_switcher *switcher) {
 			monitor->window_geometry.x + (monitor->window_geometry.width - width) / 2,
 			monitor->window_geometry.y + (monitor->window_geometry.height - height) / 2);
 
+	switcher->base.output = monitor->output;
 	ptychite_window_relay_draw(&switcher->base, width, height);
 	wlr_scene_node_set_enabled(&switcher->base.element.scene_tree->node, true);
 }
