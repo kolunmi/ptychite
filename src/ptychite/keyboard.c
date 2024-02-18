@@ -161,6 +161,7 @@ static void keyboard_handle_key(struct wl_listener *listener, void *data) {
 						((struct ptychite_switcher_app *)server->switcher->apps.data)[server->switcher->idx].view;
 				ptychite_view_focus(view, view->xdg_toplevel->base->surface);
 
+				handled = true;
 				break;
 			}
 		}
