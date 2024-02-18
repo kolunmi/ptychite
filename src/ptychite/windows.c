@@ -57,12 +57,7 @@ int ptychite_window_relay_draw(struct ptychite_window *window, int width, int he
 		return -1;
 	}
 
-	float scale;
-	if (window->output) {
-		scale = window->output->scale;
-	} else {
-		scale = 1.0;
-	}
+	float scale = window->output ? window->output->scale : 1.0;
 	int scaled_width = ceil(width * scale);
 	int scaled_height = ceil(height * scale);
 
