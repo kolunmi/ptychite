@@ -1,11 +1,14 @@
+#include <wayland-server-protocol.h>
+
 #include <wlr/backend/session.h>
 #include <wlr/types/wlr_keyboard.h>
 
-#include "keyboard.h"
-#include "server.h"
 #include "compositor.h"
 #include "config.h"
+#include "keyboard.h"
 #include "monitor.h"
+#include "server.h"
+#include "src/ptychite/view.h"
 #include "windows.h"
 
 static void keyboard_handle_key(struct wl_listener *listener, void *data) {
@@ -147,6 +150,20 @@ static void keyboard_handle_key(struct wl_listener *listener, void *data) {
 				}
 			}
 		}
+	} else if (event->state == WL_KEYBOARD_KEY_STATE_RELEASED) {
+		int i;
+		for (i = 0; i < nsyms; i++) {
+			/* FIXME just a temporary way to get app switching to work with default keybind */
+			if (syms[i] == XKB_KEY_Super_L && server->switcher->base.element.scene_tree->node.enabled) {
+				wlr_scene_node_set_enabled(&server->switcher->base.element.scene_tree->node, false);
+
+				struct ptychite_view *view =
+						((struct ptychite_switcher_app *)server->switcher->apps.data)[server->switcher->idx].view;
+				ptychite_view_focus(view, view->xdg_toplevel->base->surface);
+
+				break;
+			}
+		}
 	}
 
 	if (!handled) {
@@ -174,7 +191,7 @@ static void keyboard_handle_modifiers(struct wl_listener *listener, void *data) 
 }
 
 void ptychite_keyboard_rig(struct ptychite_keyboard *keyboard, struct wlr_input_device *device) {
-  	keyboard->modifiers.notify = keyboard_handle_modifiers;
+	keyboard->modifiers.notify = keyboard_handle_modifiers;
 	wl_signal_add(&keyboard->keyboard->events.modifiers, &keyboard->modifiers);
 	keyboard->key.notify = keyboard_handle_key;
 	wl_signal_add(&keyboard->keyboard->events.key, &keyboard->key);

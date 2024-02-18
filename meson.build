@@ -137,6 +137,7 @@ executable(
     'src/ptychite/windows/control.c',
     'src/ptychite/windows/titlebar.c',
     'src/ptychite/windows/notification.c',
+    'src/ptychite/windows/switcher.c',
 
     'src/ptychite/dbus/xdg_notification.c',
   ],

@@ -4,11 +4,12 @@
 #include <string.h>
 
 #include "action.h"
+#include "applications.h"
+#include "macros.h"
+#include "monitor.h"
 #include "server.h"
 #include "view.h"
-#include "monitor.h"
 #include "windows.h"
-#include "macros.h"
 
 static void server_action_terminate(struct ptychite_server *server, void *data) {
 	wl_display_terminate(server->display);
@@ -155,6 +156,22 @@ static void server_action_swap_front(struct ptychite_server *server, void *data)
 	ptychite_monitor_tile(new_front->monitor);
 }
 
+static void server_action_switch_app(struct ptychite_server *server, void *data) {
+	struct ptychite_switcher *switcher = server->switcher;
+
+	if (switcher->base.element.scene_tree->node.enabled) {
+		switcher->idx++;
+		int len = switcher->apps.size / sizeof(struct ptychite_switcher_app);
+		if (switcher->idx >= len) {
+			switcher->idx = 0;
+		}
+	} else {
+		switcher->idx = -1;
+	}
+
+	ptychite_switcher_draw_auto(switcher);
+}
+
 static const struct {
 	char *name;
 	ptychite_action_func_t action_func;
@@ -175,6 +192,7 @@ static const struct {
 		{"next_view", server_action_focus_next_view, PTYCHITE_ACTION_FUNC_DATA_NONE},
 		{"prev_view", server_action_focus_previous_view, PTYCHITE_ACTION_FUNC_DATA_NONE},
 		{"swap_front", server_action_swap_front, PTYCHITE_ACTION_FUNC_DATA_NONE},
+		{"switch_app", server_action_switch_app, PTYCHITE_ACTION_FUNC_DATA_NONE},
 };
 
 void ptychite_server_execute_action(struct ptychite_server *server, struct ptychite_action *action) {

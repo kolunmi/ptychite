@@ -139,6 +139,12 @@ void ptychite_view_focus(struct ptychite_view *view, struct wlr_surface *surface
 				keyboard->num_keycodes, &keyboard->modifiers);
 	}
 
+	if (view->monitor && view->workspace != view->monitor->current_workspace) {
+		ptychite_monitor_switch_workspace(view->monitor, view->workspace);
+	}
+
+	server->active_monitor = view->monitor;
+
 	struct ptychite_monitor *monitor;
 	wl_list_for_each(monitor, &view->server->monitors, link) {
 		if (!monitor->panel) {

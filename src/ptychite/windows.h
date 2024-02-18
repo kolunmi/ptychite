@@ -7,6 +7,7 @@
 
 #include "element.h"
 #include "notification.h"
+#include "applications.h"
 #include "util.h"
 
 struct ptychite_window {
@@ -94,10 +95,29 @@ struct ptychite_title_bar {
 
 extern const struct ptychite_window_impl ptychite_title_bar_window_impl;
 
+/* Switcher */
+struct ptychite_switcher_app {
+	struct ptychite_application *app;
+
+	// BEWARE DANGLING POINTER
+	struct ptychite_view *view;
+};
+
+struct ptychite_switcher {
+	struct ptychite_window base;
+
+	struct wl_array apps;
+	int idx;
+};
+
+extern const struct ptychite_window_impl ptychite_switcher_window_impl;
+
+void ptychite_switcher_draw_auto(struct ptychite_switcher *switcher);
+
 /* Notification */
 struct ptychite_notification {
 	struct ptychite_window base;
-  
+
 	struct wl_list link;
 	struct ptychite_server *server;
 

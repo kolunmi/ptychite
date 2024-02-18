@@ -40,6 +40,7 @@
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/log.h>
 
+#include "applications.h"
 #include "compositor.h"
 #include "config.h"
 #include "dbus.h"
@@ -48,10 +49,9 @@
 #include "message.h"
 #include "monitor.h"
 #include "server.h"
+#include "util.h"
 #include "view.h"
 #include "windows.h"
-#include "applications.h"
-#include "util.h"
 
 static void server_activate_monitor(struct ptychite_server *server, struct ptychite_monitor *monitor) {
 	server->active_monitor = monitor;
@@ -763,7 +763,7 @@ struct ptychite_server *ptychite_server_create(void) {
 int ptychite_server_init_and_run(struct ptychite_server *server, struct ptychite_compositor *compositor) {
 	server->compositor = compositor;
 	server->terminated = false;
-	
+
 	wl_array_init(&server->keys);
 	ptychite_hash_map_init(&server->applications, ptychite_murmur3_string_hash);
 	ptychite_hash_map_init(&server->icons, ptychite_murmur3_string_hash);
@@ -912,6 +912,16 @@ int ptychite_server_init_and_run(struct ptychite_server *server, struct ptychite
 		return -1;
 	}
 	ptychite_control_hide(server->control);
+
+	if (!(server->switcher = calloc(1, sizeof(struct ptychite_switcher)))) {
+		return -1;
+	}
+	if (ptychite_window_init(
+				&server->switcher->base, server, &ptychite_switcher_window_impl, server->layers.top, NULL)) {
+		return -1;
+	}
+	wl_array_init(&server->switcher->apps);
+	wlr_scene_node_set_enabled(&server->switcher->base.element.scene_tree->node, false);
 
 	if (!(server->time_tick = wl_event_loop_add_timer(
 				  wl_display_get_event_loop(server->display), server_time_tick_update, server))) {

@@ -115,16 +115,19 @@ void ptychite_monitor_switch_workspace(struct ptychite_monitor *monitor, struct 
 		ptychite_window_relay_draw_same_size(&monitor->panel->base);
 	}
 
-	if (wl_list_empty(&monitor->current_workspace->views_focus)) {
-		struct wlr_surface *focused_surface = monitor->server->seat->keyboard_state.focused_surface;
-		if (focused_surface) {
-			ptychite_surface_unfocus(focused_surface);
-			wlr_seat_keyboard_notify_clear_focus(monitor->server->seat);
+	struct ptychite_view *focused_view = ptychite_server_get_focused_view(monitor->server);
+	if (!focused_view || focused_view->workspace != workspace) {
+		if (wl_list_empty(&monitor->current_workspace->views_focus)) {
+			struct wlr_surface *focused_surface = monitor->server->seat->keyboard_state.focused_surface;
+			if (focused_surface) {
+				ptychite_surface_unfocus(focused_surface);
+				wlr_seat_keyboard_notify_clear_focus(monitor->server->seat);
+			}
+		} else {
+			struct ptychite_view *new_view =
+					wl_container_of(monitor->current_workspace->views_focus.next, new_view, workspace_focus_link);
+			ptychite_view_focus(new_view, new_view->xdg_toplevel->base->surface);
 		}
-	} else {
-		struct ptychite_view *new_view =
-				wl_container_of(monitor->current_workspace->views_focus.next, new_view, workspace_focus_link);
-		ptychite_view_focus(new_view, new_view->xdg_toplevel->base->surface);
 	}
 
 	ptychite_server_check_cursor(monitor->server);
