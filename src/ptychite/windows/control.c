@@ -25,7 +25,7 @@ static void control_draw(
 	float *gray1 = config->panel.colors.gray1;
 	float *gray2 = config->panel.colors.gray2;
 	float *border = config->panel.colors.border;
-	float *seperator = config->panel.colors.seperator;
+	float *separator = config->panel.colors.separator;
 
 	int rect_radius = fmin(box.width, box.height) / 20;
 	ptychite_cairo_draw_rounded_rect(cairo, box.x, box.y, box.width, box.height, rect_radius);
@@ -50,7 +50,7 @@ static void control_draw(
 			y += height + rect_radius;
 			cairo_move_to(cairo, box.x, y);
 			cairo_line_to(cairo, box.x + box.width, y);
-			cairo_set_source_rgba(cairo, seperator[0], seperator[1], seperator[2], seperator[3]);
+			cairo_set_source_rgba(cairo, separator[0], separator[1], separator[2], separator[3]);
 			cairo_set_line_width(cairo, 2);
 			cairo_stroke(cairo);
 			y += rect_radius;

@@ -63,7 +63,7 @@ struct ptychite_config {
 			float gray1[4];
 			float gray2[4];
 			float border[4];
-			float seperator[4];
+			float separator[4];
 			float chord[4];
 		} colors;
 	} panel;

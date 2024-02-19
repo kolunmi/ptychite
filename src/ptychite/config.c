@@ -8,12 +8,12 @@
 
 #include <wlr/util/log.h>
 
+#include "action.h"
 #include "compositor.h"
 #include "config.h"
 #include "json.h"
 #include "macros.h"
 #include "server.h"
-#include "action.h"
 
 typedef int (*ptychite_property_set_func_t)(
 		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error);
@@ -610,7 +610,7 @@ static struct json_object *config_get_panel_colors_border(struct ptychite_config
 	return arrcolor_convert_to_json(config->panel.colors.border);
 }
 
-static int config_set_panel_colors_seperator(
+static int config_set_panel_colors_separator(
 		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
 	if (!json_object_is_type(value, json_type_string)) {
 		*error = "panel color must be a string";
@@ -618,7 +618,7 @@ static int config_set_panel_colors_seperator(
 	}
 	const char *color = json_object_get_string(value);
 
-	if (arrcolor_parse_from_string(config->panel.colors.seperator, color)) {
+	if (arrcolor_parse_from_string(config->panel.colors.separator, color)) {
 		*error = "panel color is malformed";
 		return -1;
 	}
@@ -630,8 +630,8 @@ static int config_set_panel_colors_seperator(
 	return 0;
 }
 
-static struct json_object *config_get_panel_colors_seperator(struct ptychite_config *config) {
-	return arrcolor_convert_to_json(config->panel.colors.seperator);
+static struct json_object *config_get_panel_colors_separator(struct ptychite_config *config) {
+	return arrcolor_convert_to_json(config->panel.colors.separator);
 }
 
 static int config_set_panel_colors_chord(
@@ -1010,8 +1010,8 @@ struct property_entry config_property_table[] = {
 		{(char *[]){"panel", "colors", "gray1", NULL}, config_set_panel_colors_gray1, config_get_panel_colors_gray1},
 		{(char *[]){"panel", "colors", "gray2", NULL}, config_set_panel_colors_gray2, config_get_panel_colors_gray2},
 		{(char *[]){"panel", "colors", "border", NULL}, config_set_panel_colors_border, config_get_panel_colors_border},
-		{(char *[]){"panel", "colors", "seperator", NULL}, config_set_panel_colors_seperator,
-				config_get_panel_colors_seperator},
+		{(char *[]){"panel", "colors", "separator", NULL}, config_set_panel_colors_separator,
+				config_get_panel_colors_separator},
 		{(char *[]){"panel", "colors", "chord", NULL}, config_set_panel_colors_chord, config_get_panel_colors_chord},
 
 		{(char *[]){"views", "map_to_front", NULL}, config_set_views_map_to_front, config_get_views_map_to_front},
@@ -1291,10 +1291,10 @@ int ptychite_config_init(struct ptychite_config *config, struct ptychite_composi
 	config->panel.colors.border[1] = 0.6;
 	config->panel.colors.border[2] = 0.6;
 	config->panel.colors.border[3] = 1.0;
-	config->panel.colors.seperator[0] = 0.5;
-	config->panel.colors.seperator[1] = 0.5;
-	config->panel.colors.seperator[2] = 0.5;
-	config->panel.colors.seperator[3] = 1.0;
+	config->panel.colors.separator[0] = 0.5;
+	config->panel.colors.separator[1] = 0.5;
+	config->panel.colors.separator[2] = 0.5;
+	config->panel.colors.separator[3] = 1.0;
 	config->panel.colors.chord[0] = 0.8;
 	config->panel.colors.chord[1] = 0.6;
 	config->panel.colors.chord[2] = 0.2;
