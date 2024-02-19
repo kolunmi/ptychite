@@ -10,7 +10,8 @@
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/box.h>
 
-#include "src/ptychite/util.h"
+#include "windows.h"
+#include "util.h"
 
 struct ptychite_compositor;
 struct ptychite_server;
@@ -101,7 +102,7 @@ struct ptychite_server {
 	struct ptychite_hash_map applications;
 	struct ptychite_hash_map icons;
 
-	struct ptychite_switcher *switcher;
+	struct ptychite_switcher switcher;
 };
 
 struct ptychite_view *ptychite_server_get_top_view(struct ptychite_server *server);

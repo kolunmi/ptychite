@@ -913,15 +913,17 @@ int ptychite_server_init_and_run(struct ptychite_server *server, struct ptychite
 	}
 	ptychite_control_hide(server->control);
 
-	if (!(server->switcher = calloc(1, sizeof(struct ptychite_switcher)))) {
-		return -1;
-	}
 	if (ptychite_window_init(
-				&server->switcher->base, server, &ptychite_switcher_window_impl, server->layers.top, NULL)) {
+				&server->switcher.base, server, &ptychite_switcher_window_impl, server->layers.top, NULL)) {
 		return -1;
 	}
-	wl_array_init(&server->switcher->apps);
-	wlr_scene_node_set_enabled(&server->switcher->base.element.scene_tree->node, false);
+	if (ptychite_window_init(&server->switcher.sub_switcher, server, &ptychite_sub_switcher_window_impl,
+				server->switcher.base.element.scene_tree, NULL)) {
+		return -1;
+	}
+	wl_list_init(&server->switcher.sapps);
+	wlr_scene_node_set_enabled(&server->switcher.base.element.scene_tree->node, false);
+	wlr_scene_node_set_enabled(&server->switcher.sub_switcher.element.scene_tree->node, false);
 
 	if (!(server->time_tick = wl_event_loop_add_timer(
 				  wl_display_get_event_loop(server->display), server_time_tick_update, server))) {

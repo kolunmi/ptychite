@@ -2,12 +2,13 @@
 #define PTYCHITE_WINDOWS_H
 
 #include <cairo.h>
+#include <wayland-util.h>
 
 #include <wlr/types/wlr_pointer.h>
 
+#include "applications.h"
 #include "element.h"
 #include "notification.h"
-#include "applications.h"
 #include "util.h"
 
 struct ptychite_window {
@@ -97,22 +98,27 @@ extern const struct ptychite_window_impl ptychite_title_bar_window_impl;
 
 /* Switcher */
 struct ptychite_switcher_app {
+	struct wl_list link;
+
 	struct ptychite_application *app;
 
-	// BEWARE DANGLING POINTER
-	struct ptychite_view *view;
+	struct wl_list views;
+	int idx;
 };
 
 struct ptychite_switcher {
 	struct ptychite_window base;
 
-	struct wl_array apps;
-	int idx;
+	struct wl_list sapps;
+	struct ptychite_switcher_app *cur;
+
+	struct ptychite_window sub_switcher;
 };
 
 extern const struct ptychite_window_impl ptychite_switcher_window_impl;
+extern const struct ptychite_window_impl ptychite_sub_switcher_window_impl;
 
-void ptychite_switcher_draw_auto(struct ptychite_switcher *switcher);
+void ptychite_switcher_draw_auto(struct ptychite_switcher *switcher, bool sub_switcher);
 
 /* Notification */
 struct ptychite_notification {

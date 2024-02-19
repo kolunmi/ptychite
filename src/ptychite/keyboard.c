@@ -1,4 +1,5 @@
 #include <wayland-server-protocol.h>
+#include <wayland-util.h>
 
 #include <wlr/backend/session.h>
 #include <wlr/types/wlr_keyboard.h>
@@ -154,12 +155,23 @@ static void keyboard_handle_key(struct wl_listener *listener, void *data) {
 		int i;
 		for (i = 0; i < nsyms; i++) {
 			/* FIXME just a temporary way to get app switching to work with default keybind */
-			if (syms[i] == XKB_KEY_Super_L && server->switcher->base.element.scene_tree->node.enabled) {
-				wlr_scene_node_set_enabled(&server->switcher->base.element.scene_tree->node, false);
+			if (syms[i] == XKB_KEY_Super_L && server->switcher.base.element.scene_tree->node.enabled) {
+				wlr_scene_node_set_enabled(&server->switcher.base.element.scene_tree->node, false);
 
-				struct ptychite_view *view =
-						((struct ptychite_switcher_app *)server->switcher->apps.data)[server->switcher->idx].view;
-				ptychite_view_focus(view, view->xdg_toplevel->base->surface);
+				int idx = 0;
+				bool found = false;
+
+				struct ptychite_view *view;
+				wl_list_for_each(view, &server->switcher.cur->views, switcher_link) {
+					if (idx == server->switcher.cur->idx) {
+						found = true;
+						break;
+					}
+					idx++;
+				}
+				if (found) {
+					ptychite_view_focus(view, view->xdg_toplevel->base->surface);
+				}
 
 				handled = true;
 				break;

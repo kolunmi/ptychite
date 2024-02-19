@@ -1,17 +1,21 @@
 #ifndef PTYCHITE_VIEW_H
 #define PTYCHITE_VIEW_H
 
-#include "server.h"
 #include "element.h"
+#include "server.h"
 
 struct ptychite_icon;
 
 struct ptychite_view {
 	struct ptychite_element element;
+
 	struct wl_list server_link;
 	struct wl_list monitor_link;
 	struct wl_list workspace_order_link;
 	struct wl_list workspace_focus_link;
+
+	bool in_switcher;
+	struct wl_list switcher_link;
 
 	struct ptychite_server *server;
 	struct ptychite_monitor *monitor;

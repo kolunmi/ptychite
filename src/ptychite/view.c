@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <wayland-util.h>
 
 #include <wlr/types/wlr_cursor.h>
 
@@ -254,6 +255,9 @@ static void view_handle_unmap(struct wl_listener *listener, void *data) {
 	wl_list_remove(&view->workspace_focus_link);
 	wl_list_remove(&view->monitor_link);
 	wl_list_remove(&view->server_link);
+	if (view->in_switcher) {
+		wl_list_remove(&view->switcher_link);
+	}
 	wl_list_remove(&view->set_title.link);
 
 	wlr_scene_node_set_enabled(&view->element.scene_tree->node, false);

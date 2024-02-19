@@ -157,19 +157,31 @@ static void server_action_swap_front(struct ptychite_server *server, void *data)
 }
 
 static void server_action_switch_app(struct ptychite_server *server, void *data) {
-	struct ptychite_switcher *switcher = server->switcher;
+	struct ptychite_switcher *switcher = &server->switcher;
 
 	if (switcher->base.element.scene_tree->node.enabled) {
-		switcher->idx++;
-		int len = switcher->apps.size / sizeof(struct ptychite_switcher_app);
-		if (switcher->idx >= len) {
-			switcher->idx = 0;
-		}
+		struct wl_list *list = switcher->cur->link.next == &switcher->sapps ? switcher->cur->link.next->next
+																			: switcher->cur->link.next;
+		switcher->cur = wl_container_of(list, switcher->cur, link);
 	} else {
-		switcher->idx = -1;
+		switcher->cur = NULL;
 	}
 
-	ptychite_switcher_draw_auto(switcher);
+	ptychite_switcher_draw_auto(switcher, false);
+}
+
+static void server_action_switch_app_instance(struct ptychite_server *server, void *data) {
+	struct ptychite_switcher *switcher = &server->switcher;
+
+	if (switcher->base.element.scene_tree->node.enabled) {
+		if (switcher->sub_switcher.element.scene_tree->node.enabled) {
+			switcher->cur->idx++;
+		}
+	} else {
+		switcher->cur = NULL;
+	}
+
+	ptychite_switcher_draw_auto(switcher, true);
 }
 
 static const struct {
@@ -193,6 +205,7 @@ static const struct {
 		{"prev_view", server_action_focus_previous_view, PTYCHITE_ACTION_FUNC_DATA_NONE},
 		{"swap_front", server_action_swap_front, PTYCHITE_ACTION_FUNC_DATA_NONE},
 		{"switch_app", server_action_switch_app, PTYCHITE_ACTION_FUNC_DATA_NONE},
+		{"switch_app_instance", server_action_switch_app_instance, PTYCHITE_ACTION_FUNC_DATA_NONE},
 };
 
 void ptychite_server_execute_action(struct ptychite_server *server, struct ptychite_action *action) {

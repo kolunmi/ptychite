@@ -1,11 +1,12 @@
-#include <wlr/types/wlr_scene.h>
-#include <wlr/types/wlr_output.h>
 #include <assert.h>
 #include <pango/pangocairo.h>
 
-#include "windows.h"
+#include <wlr/types/wlr_output.h>
+#include <wlr/types/wlr_scene.h>
+
 #include "buffer.h"
 #include "server.h"
+#include "windows.h"
 
 struct ptychite_window *ptychite_element_get_window(struct ptychite_element *element) {
 	assert(element->type == PTYCHITE_ELEMENT_WINDOW);
@@ -24,11 +25,13 @@ static void window_handle_destroy(struct wl_listener *listener, void *data) {
 		window->server->hovered_window = NULL;
 	}
 
-	window->impl->destroy(window);
+	if (window->impl->destroy) {
+		window->impl->destroy(window);
+	}
 }
 
-int ptychite_window_init(struct ptychite_window *window, struct ptychite_server *server, const struct ptychite_window_impl *impl,
-		struct wlr_scene_tree *parent, struct wlr_output *output) {
+int ptychite_window_init(struct ptychite_window *window, struct ptychite_server *server,
+		const struct ptychite_window_impl *impl, struct wlr_scene_tree *parent, struct wlr_output *output) {
 	if (!(window->element.scene_tree = wlr_scene_tree_create(parent))) {
 		return -1;
 	}
