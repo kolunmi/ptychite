@@ -10,8 +10,8 @@
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/box.h>
 
-#include "windows.h"
 #include "util.h"
+#include "windows.h"
 
 struct ptychite_compositor;
 struct ptychite_server;

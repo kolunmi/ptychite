@@ -950,7 +950,7 @@ int ptychite_server_init_and_run(struct ptychite_server *server, struct ptychite
 	}
 
 	wlr_log(WLR_INFO, "Getting applications.");
-	read_applications(server);
+	ptychite_server_init_applications(server);
 
 	setenv("WAYLAND_DISPLAY", socket, true);
 

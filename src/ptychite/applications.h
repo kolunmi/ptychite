@@ -14,6 +14,6 @@ struct ptychite_application {
 	int refs;
 };
 
-void read_applications(struct ptychite_server *server);
+int ptychite_server_init_applications(struct ptychite_server *server);
 
 #endif

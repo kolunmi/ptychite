@@ -29,13 +29,13 @@ int init_dbus(struct ptychite_server *server) {
 	ret = sd_bus_open_user(&server->bus);
 	if (ret < 0) {
 		fprintf(stderr, "Failed to connect to user bus: %s\n", strerror(-ret));
-		goto error;
+		goto err;
 	}
 
 	ret = init_dbus_xdg(server);
 	if (ret < 0) {
 		fprintf(stderr, "Failed to initialize XDG interface: %s\n", strerror(-ret));
-		goto error;
+		goto err;
 	}
 
 	ret = sd_bus_request_name(server->bus, service_name, 0);
@@ -44,7 +44,7 @@ int init_dbus(struct ptychite_server *server) {
 		if (ret == -EEXIST) {
 			fprintf(stderr, "Is a notification daemon already running?\n");
 		}
-		goto error;
+		goto err;
 	}
 
 	server->dbus_active = true;
@@ -54,7 +54,7 @@ int init_dbus(struct ptychite_server *server) {
 
 	return 0;
 
-error:
+err:
 	finish_dbus(server);
 	server->dbus_active = false;
 	return -1;
