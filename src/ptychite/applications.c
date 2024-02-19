@@ -166,8 +166,8 @@ static void read_df(struct ptychite_server *server, const char *path, const char
 }
 
 static void read_applications(struct ptychite_server *server) {
-	DIR *dir;
-	if (!(dir = opendir("/usr/share/applications"))) {
+	DIR *dir = opendir("/usr/share/applications");
+	if (!dir) {
 		return;
 	}
 
