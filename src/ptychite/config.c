@@ -63,25 +63,25 @@ static int uint_parse_from_hexcolor_string(uint32_t *dest, const char *string, i
 	return 0;
 }
 
-static int color_parse_from_string(pixman_color_t *color, const char *string) {
-	uint32_t parsed;
-	int len;
-	if (uint_parse_from_hexcolor_string(&parsed, string, &len)) {
-		return -1;
-	}
+/* static int color_parse_from_string(pixman_color_t *color, const char *string) { */
+/* 	uint32_t parsed; */
+/* 	int len; */
+/* 	if (uint_parse_from_hexcolor_string(&parsed, string, &len)) { */
+/* 		return -1; */
+/* 	} */
 
-	if (len == 8) {
-		color->alpha = (parsed & 0xff) * 0x101;
-		parsed >>= 8;
-	} else {
-		color->alpha = 0xffff;
-	}
-	color->red = ((parsed >> 16) & 0xff) * 0x101;
-	color->green = ((parsed >> 8) & 0xff) * 0x101;
-	color->blue = ((parsed >> 0) & 0xff) * 0x101;
+/* 	if (len == 8) { */
+/* 		color->alpha = (parsed & 0xff) * 0x101; */
+/* 		parsed >>= 8; */
+/* 	} else { */
+/* 		color->alpha = 0xffff; */
+/* 	} */
+/* 	color->red = ((parsed >> 16) & 0xff) * 0x101; */
+/* 	color->green = ((parsed >> 8) & 0xff) * 0x101; */
+/* 	color->blue = ((parsed >> 0) & 0xff) * 0x101; */
 
-	return 0;
-}
+/* 	return 0; */
+/* } */
 
 static int arrcolor_parse_from_string(float color[4], const char *string) {
 	uint32_t parsed;
@@ -103,13 +103,13 @@ static int arrcolor_parse_from_string(float color[4], const char *string) {
 	return 0;
 }
 
-static json_object *color_convert_to_json(pixman_color_t *color) {
-	char buf[10];
-	snprintf(buf, sizeof(buf), "#%02x%02x%02x%02x", (uint8_t)color->red, (uint8_t)color->green, (uint8_t)color->blue,
-			(uint8_t)color->alpha);
+/* static json_object *color_convert_to_json(pixman_color_t *color) { */
+/* 	char buf[10]; */
+/* 	snprintf(buf, sizeof(buf), "#%02x%02x%02x%02x", (uint8_t)color->red, (uint8_t)color->green, (uint8_t)color->blue, */
+/* 			(uint8_t)color->alpha); */
 
-	return json_object_new_string(buf);
-}
+/* 	return json_object_new_string(buf); */
+/* } */
 
 static json_object *arrcolor_convert_to_json(float color[4]) {
 	char buf[10];
@@ -466,16 +466,16 @@ static struct json_object *config_get_panel_font(struct ptychite_config *config)
 	return json_object_new_string(config->panel.font.string);
 }
 
-static int config_set_panel_colors_foreground(
-		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
+static int config_set_color_helper(struct ptychite_config *config, struct json_object *value,
+		enum ptychite_property_set_mode mode, float dest[4], char **error) {
 	if (!json_object_is_type(value, json_type_string)) {
-		*error = "panel color must be a string";
+		*error = "color must be a string";
 		return -1;
 	}
 	const char *color = json_object_get_string(value);
 
-	if (arrcolor_parse_from_string(config->panel.colors.foreground, color)) {
-		*error = "panel color is malformed";
+	if (arrcolor_parse_from_string(dest, color)) {
+		*error = "color is malformed";
 		return -1;
 	}
 
@@ -484,6 +484,11 @@ static int config_set_panel_colors_foreground(
 	}
 
 	return 0;
+}
+
+static int config_set_panel_colors_foreground(
+		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
+	return config_set_color_helper(config, value, mode, config->panel.colors.foreground, error);
 }
 
 static struct json_object *config_get_panel_colors_foreground(struct ptychite_config *config) {
@@ -492,22 +497,7 @@ static struct json_object *config_get_panel_colors_foreground(struct ptychite_co
 
 static int config_set_panel_colors_background(
 		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
-	if (!json_object_is_type(value, json_type_string)) {
-		*error = "panel color must be a string";
-		return -1;
-	}
-	const char *color = json_object_get_string(value);
-
-	if (arrcolor_parse_from_string(config->panel.colors.background, color)) {
-		*error = "panel color is malformed";
-		return -1;
-	}
-
-	if (config->compositor) {
-		ptychite_server_configure_panels(config->compositor->server);
-	}
-
-	return 0;
+	return config_set_color_helper(config, value, mode, config->panel.colors.background, error);
 }
 
 static struct json_object *config_get_panel_colors_background(struct ptychite_config *config) {
@@ -516,22 +506,7 @@ static struct json_object *config_get_panel_colors_background(struct ptychite_co
 
 static int config_set_panel_colors_accent(
 		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
-	if (!json_object_is_type(value, json_type_string)) {
-		*error = "panel color must be a string";
-		return -1;
-	}
-	const char *color = json_object_get_string(value);
-
-	if (arrcolor_parse_from_string(config->panel.colors.accent, color)) {
-		*error = "panel color is malformed";
-		return -1;
-	}
-
-	if (config->compositor) {
-		ptychite_server_configure_panels(config->compositor->server);
-	}
-
-	return 0;
+	return config_set_color_helper(config, value, mode, config->panel.colors.accent, error);
 }
 
 static struct json_object *config_get_panel_colors_accent(struct ptychite_config *config) {
@@ -540,22 +515,7 @@ static struct json_object *config_get_panel_colors_accent(struct ptychite_config
 
 static int config_set_panel_colors_gray1(
 		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
-	if (!json_object_is_type(value, json_type_string)) {
-		*error = "panel color must be a string";
-		return -1;
-	}
-	const char *color = json_object_get_string(value);
-
-	if (arrcolor_parse_from_string(config->panel.colors.gray1, color)) {
-		*error = "panel color is malformed";
-		return -1;
-	}
-
-	if (config->compositor) {
-		ptychite_server_configure_panels(config->compositor->server);
-	}
-
-	return 0;
+	return config_set_color_helper(config, value, mode, config->panel.colors.gray1, error);
 }
 
 static struct json_object *config_get_panel_colors_gray1(struct ptychite_config *config) {
@@ -564,22 +524,7 @@ static struct json_object *config_get_panel_colors_gray1(struct ptychite_config 
 
 static int config_set_panel_colors_gray2(
 		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
-	if (!json_object_is_type(value, json_type_string)) {
-		*error = "panel color must be a string";
-		return -1;
-	}
-	const char *color = json_object_get_string(value);
-
-	if (arrcolor_parse_from_string(config->panel.colors.gray2, color)) {
-		*error = "panel color is malformed";
-		return -1;
-	}
-
-	if (config->compositor) {
-		ptychite_server_configure_panels(config->compositor->server);
-	}
-
-	return 0;
+	return config_set_color_helper(config, value, mode, config->panel.colors.gray2, error);
 }
 
 static struct json_object *config_get_panel_colors_gray2(struct ptychite_config *config) {
@@ -588,22 +533,7 @@ static struct json_object *config_get_panel_colors_gray2(struct ptychite_config 
 
 static int config_set_panel_colors_border(
 		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
-	if (!json_object_is_type(value, json_type_string)) {
-		*error = "panel color must be a string";
-		return -1;
-	}
-	const char *color = json_object_get_string(value);
-
-	if (arrcolor_parse_from_string(config->panel.colors.border, color)) {
-		*error = "panel color is malformed";
-		return -1;
-	}
-
-	if (config->compositor) {
-		ptychite_server_configure_panels(config->compositor->server);
-	}
-
-	return 0;
+	return config_set_color_helper(config, value, mode, config->panel.colors.border, error);
 }
 
 static struct json_object *config_get_panel_colors_border(struct ptychite_config *config) {
@@ -612,22 +542,7 @@ static struct json_object *config_get_panel_colors_border(struct ptychite_config
 
 static int config_set_panel_colors_separator(
 		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
-	if (!json_object_is_type(value, json_type_string)) {
-		*error = "panel color must be a string";
-		return -1;
-	}
-	const char *color = json_object_get_string(value);
-
-	if (arrcolor_parse_from_string(config->panel.colors.separator, color)) {
-		*error = "panel color is malformed";
-		return -1;
-	}
-
-	if (config->compositor) {
-		ptychite_server_configure_panels(config->compositor->server);
-	}
-
-	return 0;
+	return config_set_color_helper(config, value, mode, config->panel.colors.separator, error);
 }
 
 static struct json_object *config_get_panel_colors_separator(struct ptychite_config *config) {
@@ -636,22 +551,7 @@ static struct json_object *config_get_panel_colors_separator(struct ptychite_con
 
 static int config_set_panel_colors_chord(
 		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
-	if (!json_object_is_type(value, json_type_string)) {
-		*error = "panel color must be a string";
-		return -1;
-	}
-	const char *color = json_object_get_string(value);
-
-	if (arrcolor_parse_from_string(config->panel.colors.chord, color)) {
-		*error = "panel color is malformed";
-		return -1;
-	}
-
-	if (config->compositor) {
-		ptychite_server_configure_panels(config->compositor->server);
-	}
-
-	return 0;
+	return config_set_color_helper(config, value, mode, config->panel.colors.chord, error);
 }
 
 static struct json_object *config_get_panel_colors_chord(struct ptychite_config *config) {
@@ -751,18 +651,7 @@ static struct json_object *config_get_views_border_thickness(struct ptychite_con
 
 static int config_set_views_border_colors_active(
 		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
-	if (!json_object_is_type(value, json_type_string)) {
-		*error = "view border color must be a string";
-		return -1;
-	}
-	const char *color = json_object_get_string(value);
-
-	if (arrcolor_parse_from_string(config->views.border.colors.active, color)) {
-		*error = "view border color is malformed";
-		return -1;
-	}
-
-	return 0;
+	return config_set_color_helper(config, value, mode, config->views.border.colors.active, error);
 }
 
 static struct json_object *config_get_views_border_colors_active(struct ptychite_config *config) {
@@ -771,18 +660,7 @@ static struct json_object *config_get_views_border_colors_active(struct ptychite
 
 static int config_set_views_border_colors_inactive(
 		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
-	if (!json_object_is_type(value, json_type_string)) {
-		*error = "view border color must be a string";
-		return -1;
-	}
-	const char *color = json_object_get_string(value);
-
-	if (arrcolor_parse_from_string(config->views.border.colors.inactive, color)) {
-		*error = "view border color is malformed";
-		return -1;
-	}
-
-	return 0;
+	return config_set_color_helper(config, value, mode, config->views.border.colors.inactive, error);
 }
 
 static struct json_object *config_get_views_border_colors_inactive(struct ptychite_config *config) {
