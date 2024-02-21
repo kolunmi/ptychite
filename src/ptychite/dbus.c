@@ -49,6 +49,7 @@ int init_dbus(struct ptychite_server *server) {
 
 	server->dbus_active = true;
 	wl_list_init(&server->notifications);
+	wl_list_init(&server->history);
 	wl_event_loop_add_fd(wl_display_get_event_loop(server->display), sd_bus_get_fd(server->bus), WL_EVENT_READABLE,
 			handle_dbus, server);
 

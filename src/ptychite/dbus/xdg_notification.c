@@ -1,9 +1,11 @@
 #define _POSIX_C_SOURCE 200809L
 #include <stdlib.h>
+
 #include <wlr/util/log.h>
 
 #include "../dbus.h"
 #include "../icon.h"
+#include "../notification.h"
 #include "../server.h"
 #include "../windows.h"
 
@@ -68,9 +70,9 @@ static int handle_get_capabilities(sd_bus_message *msg, void *data, sd_bus_error
 
 static int handle_notification_timer(void *data) {
 	struct ptychite_notification *notif = data;
-	notif->timer = NULL;
 
 	close_notification(notif, PTYCHITE_NOTIFICATION_CLOSE_EXPIRED, true);
+	ptychite_server_arrange_notifications(notif->server);
 
 	return 0;
 }
@@ -355,6 +357,14 @@ static int handle_notify(sd_bus_message *msg, void *data, sd_bus_error *ret_erro
 		insert_notification(server, notif);
 	}
 
+	notif->icon = ptychite_icon_create_for_notification(notif);
+
+	ptychite_notification_draw_auto(notif);
+	if (!server->control->base.element.scene_tree->node.enabled) {
+		wlr_scene_node_set_enabled(&notif->base.element.scene_tree->node, true);
+		ptychite_server_arrange_notifications(server);
+	}
+
 	int32_t expire_timeout = notif->requested_timeout;
 	if (expire_timeout < 0) {
 		expire_timeout = 5;
@@ -363,11 +373,10 @@ static int handle_notify(sd_bus_message *msg, void *data, sd_bus_error *ret_erro
 	if (expire_timeout > 0) {
 		notif->timer =
 				wl_event_loop_add_timer(wl_display_get_event_loop(server->display), handle_notification_timer, notif);
+		if (notif->timer) {
+			wl_event_source_timer_update(notif->timer, expire_timeout * 1000);
+		}
 	}
-
-	notif->icon = ptychite_icon_create_for_notification(notif);
-
-	/* set_dirty(notif->surface); */
 
 	return sd_bus_reply_method_return(msg, "u", notif->id);
 }
@@ -385,6 +394,7 @@ static int handle_close_notification(sd_bus_message *msg, void *data, sd_bus_err
 	struct ptychite_notification *notif = get_notification(server, id);
 	if (notif) {
 		close_notification(notif, PTYCHITE_NOTIFICATION_CLOSE_REQUEST, true);
+		ptychite_server_arrange_notifications(notif->server);
 	}
 
 	return sd_bus_reply_method_return(msg, "");

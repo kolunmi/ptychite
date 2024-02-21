@@ -964,6 +964,10 @@ int ptychite_server_init_and_run(struct ptychite_server *server, struct ptychite
 	wlr_output_layout_destroy(server->output_layout);
 	wl_display_destroy(server->display);
 
+	if (server->dbus_active) {
+		finish_dbus(server);
+	}
+
 	return 0;
 }
 

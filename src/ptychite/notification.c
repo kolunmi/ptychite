@@ -6,12 +6,10 @@
 
 #include "dbus.h"
 #include "icon.h"
+#include "monitor.h"
+#include "notification.h"
 #include "server.h"
 #include "windows.h"
-
-bool hotspot_at(struct wlr_box *hotspot, int32_t x, int32_t y) {
-	return x >= hotspot->x && y >= hotspot->y && x < hotspot->x + hotspot->width && y < hotspot->y + hotspot->height;
-}
 
 void reset_notification(struct ptychite_notification *notif) {
 	struct ptychite_notification_action *action, *tmp;
@@ -25,8 +23,10 @@ void reset_notification(struct ptychite_notification *notif) {
 	notif->urgency = PTYCHITE_NOTIFICATION_URGENCY_UNKNOWN;
 	notif->progress = -1;
 
-	/* destroy_timer(notif->timer); */
-	notif->timer = NULL;
+	if (notif->timer) {
+		wl_event_source_remove(notif->timer);
+		notif->timer = NULL;
+	}
 
 	free(notif->app_name);
 	free(notif->app_icon);
@@ -35,7 +35,7 @@ void reset_notification(struct ptychite_notification *notif) {
 	free(notif->category);
 	free(notif->desktop_entry);
 	free(notif->tag);
-	if (notif->image_data != NULL) {
+	if (notif->image_data) {
 		free(notif->image_data->data);
 		free(notif->image_data);
 	}
@@ -49,20 +49,26 @@ void reset_notification(struct ptychite_notification *notif) {
 	notif->tag = strdup("");
 
 	notif->image_data = NULL;
-
-	destroy_icon(notif->icon);
-	notif->icon = NULL;
+	if (notif->icon) {
+		ptychite_icon_unref(notif->icon);
+		notif->icon = NULL;
+	}
 }
 
 struct ptychite_notification *create_notification(struct ptychite_server *server) {
 	struct ptychite_notification *notif = calloc(1, sizeof(struct ptychite_notification));
-	if (notif == NULL) {
-		fprintf(stderr, "allocation failed\n");
+	if (!notif) {
 		return NULL;
 	}
 
+	if (ptychite_window_init(&notif->base, server, &ptychite_notification_window_impl, server->layers.overlay, NULL)) {
+		free(notif);
+		return NULL;
+	}
+	wlr_scene_node_set_enabled(&notif->base.element.scene_tree->node, false);
+
 	notif->server = server;
-	++server->last_id;
+	server->last_id++;
 	notif->id = server->last_id;
 	wl_list_init(&notif->actions);
 	wl_list_init(&notif->link);
@@ -78,6 +84,8 @@ void destroy_notification(struct ptychite_notification *notif) {
 	wl_list_remove(&notif->link);
 
 	reset_notification(notif);
+
+	wlr_scene_node_destroy(&notif->base.element.scene_tree->node);
 
 	free(notif->app_name);
 	free(notif->app_icon);
@@ -96,8 +104,12 @@ void close_notification(
 	wl_list_remove(&notif->link); // Remove so regrouping works...
 	wl_list_init(&notif->link); // ...but destroy will remove again.
 
-	/* destroy_timer(notif->timer); */
-	notif->timer = NULL;
+	if (notif->timer) {
+		wl_event_source_remove(notif->timer);
+		notif->timer = NULL;
+	}
+
+	wlr_scene_node_set_enabled(&notif->base.element.scene_tree->node, false);
 
 	if (add_to_history) {
 		wl_list_insert(&notif->server->history, &notif->link);
@@ -288,8 +300,36 @@ size_t format_text(const char *format, char *buf, ptychite_format_func_t format_
 }
 
 void insert_notification(struct ptychite_server *server, struct ptychite_notification *notif) {
-	struct wl_list *insert_node;
+	wl_list_insert(&server->notifications, &notif->link);
 
-	insert_node = &server->notifications;
-	wl_list_insert(insert_node, &notif->link);
+	int notif_cap;
+	if (server->active_monitor) {
+		notif_cap = server->active_monitor->window_geometry.height / 120;
+		if (notif_cap <= 0) {
+			notif_cap = 1;
+		}
+	} else {
+		notif_cap = 10;
+	}
+
+	while (wl_list_length(&server->notifications) > notif_cap) {
+		struct ptychite_notification *n = wl_container_of(server->notifications.prev, n, link);
+		close_notification(n, PTYCHITE_NOTIFICATION_CLOSE_EXPIRED, true);
+	}
+}
+
+void ptychite_server_arrange_notifications(struct ptychite_server *server) {
+	struct ptychite_monitor *monitor = server->active_monitor;
+	if (!monitor) {
+		return;
+	}
+
+	int x = monitor->window_geometry.x + (monitor->window_geometry.width - 300) / 2;
+	int y = monitor->window_geometry.y + 10;
+
+	struct ptychite_notification *notif;
+	wl_list_for_each(notif, &server->notifications, link) {
+		wlr_scene_node_set_position(&notif->base.element.scene_tree->node, x, y);
+		y += notif->base.element.height;
+	}
 }

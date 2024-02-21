@@ -153,4 +153,8 @@ struct ptychite_notification {
 	struct wl_event_source *timer;
 };
 
+extern const struct ptychite_window_impl ptychite_notification_window_impl;
+
+void ptychite_notification_draw_auto(struct ptychite_notification *notif);
+
 #endif

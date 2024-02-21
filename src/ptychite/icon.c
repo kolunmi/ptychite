@@ -412,6 +412,7 @@ static struct ptychite_icon *icon_from_gdk_pixbuf_consume(GdkPixbuf *image) {
 		g_object_unref(image);
 		return NULL;
 	}
+	icon->refs = 0;
 	icon->scale = fit_to_square(image_width, image_height, 64);
 	icon->width = image_width * icon->scale;
 	icon->height = image_height * icon->scale;
@@ -427,7 +428,6 @@ static struct ptychite_icon *icon_from_gdk_pixbuf_consume(GdkPixbuf *image) {
 }
 
 struct ptychite_icon *ptychite_icon_create(struct ptychite_server *server, char *name, char **path_out) {
-	// Determine the largest scale factor of any attached output.
 	int32_t max_scale = 1;
 	struct ptychite_monitor *monitor;
 	wl_list_for_each(monitor, &server->monitors, link) {
@@ -463,10 +463,12 @@ struct ptychite_icon *ptychite_icon_create(struct ptychite_server *server, char 
 		return NULL;
 	}
 
+	icon->refs = 1;
+
 	bool rv = ptychite_hash_map_insert(&server->icons, path, icon);
 	if (!rv) {
 		free(path);
-		destroy_icon(icon);
+		ptychite_icon_unref(icon);
 		return NULL;
 	}
 
@@ -485,11 +487,14 @@ struct ptychite_icon *ptychite_icon_create_for_notification(struct ptychite_noti
 		image = load_image_data(notif->image_data);
 	}
 
-	if (!image) {
-		return ptychite_icon_create(notif->server, notif->app_icon, NULL);
+	struct ptychite_icon *icon =
+			image ? icon_from_gdk_pixbuf_consume(image) : ptychite_icon_create(notif->server, notif->app_icon, NULL);
+	if (!icon) {
+		return NULL;
 	}
+	icon->refs++;
 
-	return icon_from_gdk_pixbuf_consume(image);
+	return icon;
 }
 
 void draw_icon(cairo_t *cairo, struct ptychite_icon *icon, struct wlr_box box) {
@@ -502,11 +507,10 @@ void draw_icon(cairo_t *cairo, struct ptychite_icon *icon, struct wlr_box box) {
 	cairo_restore(cairo);
 }
 
-void destroy_icon(struct ptychite_icon *icon) {
-	if (icon != NULL) {
-		if (icon->image != NULL) {
-			cairo_surface_destroy(icon->image);
-		}
+void ptychite_icon_unref(struct ptychite_icon *icon) {
+	icon->refs--;
+	if (icon->refs <= 0) {
+		cairo_surface_destroy(icon->image);
 		free(icon);
 	}
 }

@@ -58,4 +58,11 @@ struct ptychite_notification *get_tagged_notification(
 size_t format_notification(struct ptychite_notification *notif, const char *format, char *buf);
 void insert_notification(struct ptychite_server *server, struct ptychite_notification *notif);
 
+
+
+
+
+void ptychite_server_arrange_notifications(struct ptychite_server *server);
+
+
 #endif
