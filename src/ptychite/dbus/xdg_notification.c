@@ -115,8 +115,6 @@ static int handle_notify(sd_bus_message *msg, void *data, sd_bus_error *ret_erro
 	notif->summary = strdup(summary);
 	notif->body = strdup(body);
 
-	wlr_log(WLR_INFO, "Notification received from %s: '%s'", app_name, app_icon);
-
 	ret = sd_bus_message_enter_container(msg, 'a', "s");
 	if (ret < 0) {
 		return ret;
