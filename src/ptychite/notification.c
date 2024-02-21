@@ -11,7 +11,7 @@
 #include "server.h"
 #include "windows.h"
 
-void reset_notification(struct ptychite_notification *notif) {
+void ptychite_notification_reset(struct ptychite_notification *notif) {
 	struct ptychite_notification_action *action, *tmp;
 	wl_list_for_each_safe(action, tmp, &notif->actions, link) {
 		wl_list_remove(&action->link);
@@ -55,7 +55,7 @@ void reset_notification(struct ptychite_notification *notif) {
 	}
 }
 
-struct ptychite_notification *create_notification(struct ptychite_server *server) {
+struct ptychite_notification *ptychite_notification_create(struct ptychite_server *server) {
 	struct ptychite_notification *notif = calloc(1, sizeof(struct ptychite_notification));
 	if (!notif) {
 		return NULL;
@@ -72,7 +72,7 @@ struct ptychite_notification *create_notification(struct ptychite_server *server
 	notif->id = server->last_id;
 	wl_list_init(&notif->actions);
 	wl_list_init(&notif->link);
-	reset_notification(notif);
+	ptychite_notification_reset(notif);
 
 	// Start ungrouped.
 	notif->group_index = -1;
@@ -80,10 +80,10 @@ struct ptychite_notification *create_notification(struct ptychite_server *server
 	return notif;
 }
 
-void destroy_notification(struct ptychite_notification *notif) {
+void ptychite_notification_destroy(struct ptychite_notification *notif) {
 	wl_list_remove(&notif->link);
 
-	reset_notification(notif);
+	ptychite_notification_reset(notif);
 
 	wlr_scene_node_destroy(&notif->base.element.scene_tree->node);
 
@@ -98,9 +98,9 @@ void destroy_notification(struct ptychite_notification *notif) {
 	free(notif);
 }
 
-void close_notification(
+void ptychite_notification_close(
 		struct ptychite_notification *notif, enum ptychite_notification_close_reason reason, bool add_to_history) {
-	notify_notification_closed(notif, reason);
+	ptychite_dbus_notify_notification_closed(notif, reason);
 	wl_list_remove(&notif->link); // Remove so regrouping works...
 	wl_list_init(&notif->link); // ...but destroy will remove again.
 
@@ -115,14 +115,14 @@ void close_notification(
 		wl_list_insert(&notif->server->history, &notif->link);
 		while (wl_list_length(&notif->server->history) > 5) {
 			struct ptychite_notification *n = wl_container_of(notif->server->history.prev, n, link);
-			destroy_notification(n);
+			ptychite_notification_destroy(n);
 		}
 	} else {
-		destroy_notification(notif);
+		ptychite_notification_destroy(notif);
 	}
 }
 
-struct ptychite_notification *get_notification(struct ptychite_server *server, uint32_t id) {
+struct ptychite_notification *ptychite_server_get_notification(struct ptychite_server *server, uint32_t id) {
 	struct ptychite_notification *notif;
 	wl_list_for_each(notif, &server->notifications, link) {
 		if (notif->id == id) {
@@ -144,10 +144,10 @@ struct ptychite_notification *get_tagged_notification(
 	return NULL;
 }
 
-void close_all_notifications(struct ptychite_server *server, enum ptychite_notification_close_reason reason) {
+void ptychite_server_close_all_notifications(struct ptychite_server *server, enum ptychite_notification_close_reason reason) {
 	struct ptychite_notification *notif, *tmp;
 	wl_list_for_each_safe(notif, tmp, &server->notifications, link) {
-		close_notification(notif, reason, true);
+		ptychite_notification_close(notif, reason, true);
 	}
 }
 
@@ -314,7 +314,7 @@ void insert_notification(struct ptychite_server *server, struct ptychite_notific
 
 	while (wl_list_length(&server->notifications) > notif_cap) {
 		struct ptychite_notification *n = wl_container_of(server->notifications.prev, n, link);
-		close_notification(n, PTYCHITE_NOTIFICATION_CLOSE_EXPIRED, true);
+		ptychite_notification_close(n, PTYCHITE_NOTIFICATION_CLOSE_EXPIRED, true);
 	}
 }
 

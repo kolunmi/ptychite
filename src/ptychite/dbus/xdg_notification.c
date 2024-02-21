@@ -71,7 +71,7 @@ static int handle_get_capabilities(sd_bus_message *msg, void *data, sd_bus_error
 static int handle_notification_timer(void *data) {
 	struct ptychite_notification *notif = data;
 
-	close_notification(notif, PTYCHITE_NOTIFICATION_CLOSE_EXPIRED, true);
+	ptychite_notification_close(notif, PTYCHITE_NOTIFICATION_CLOSE_EXPIRED, true);
 	ptychite_server_arrange_notifications(notif->server);
 
 	return 0;
@@ -90,16 +90,16 @@ static int handle_notify(sd_bus_message *msg, void *data, sd_bus_error *ret_erro
 
 	struct ptychite_notification *notif = NULL;
 	if (replaces_id > 0) {
-		notif = get_notification(server, replaces_id);
+		notif = ptychite_server_get_notification(server, replaces_id);
 	}
 
 	if (notif) {
-		reset_notification(notif);
+		ptychite_notification_reset(notif);
 	} else {
 		// Either we had no replaces_id, or the id given was invalid. Either
 		// way, make a new notification.
 		replaces_id = 0; // In case they got lucky and passed the next id.
-		notif = create_notification(server);
+		notif = ptychite_notification_create(server);
 	}
 
 	if (notif == NULL) {
@@ -346,7 +346,7 @@ static int handle_notify(sd_bus_message *msg, void *data, sd_bus_error *ret_erro
 		if (replace_notif) {
 			notif->id = replace_notif->id;
 			wl_list_insert(&replace_notif->link, &notif->link);
-			destroy_notification(replace_notif);
+			ptychite_notification_destroy(replace_notif);
 			replaces_id = notif->id;
 		}
 	}
@@ -391,9 +391,9 @@ static int handle_close_notification(sd_bus_message *msg, void *data, sd_bus_err
 	}
 
 	// TODO: check client
-	struct ptychite_notification *notif = get_notification(server, id);
+	struct ptychite_notification *notif = ptychite_server_get_notification(server, id);
 	if (notif) {
-		close_notification(notif, PTYCHITE_NOTIFICATION_CLOSE_REQUEST, true);
+		ptychite_notification_close(notif, PTYCHITE_NOTIFICATION_CLOSE_REQUEST, true);
 		ptychite_server_arrange_notifications(notif->server);
 	}
 
@@ -415,18 +415,18 @@ static const sd_bus_vtable service_vtable[] = {SD_BUS_VTABLE_START(0),
 		SD_BUS_METHOD("GetServerInformation", "", "ssss", handle_get_server_information, SD_BUS_VTABLE_UNPRIVILEGED),
 		SD_BUS_SIGNAL("ActionInvoked", "us", 0), SD_BUS_SIGNAL("NotificationClosed", "uu", 0), SD_BUS_VTABLE_END};
 
-int init_dbus_xdg(struct ptychite_server *server) {
+int ptychite_dbus_init_xdg(struct ptychite_server *server) {
 	return sd_bus_add_object_vtable(
 			server->bus, &server->xdg_slot, service_path, service_interface, service_vtable, server);
 }
 
-void notify_notification_closed(struct ptychite_notification *notif, enum ptychite_notification_close_reason reason) {
+void ptychite_dbus_notify_notification_closed(struct ptychite_notification *notif, enum ptychite_notification_close_reason reason) {
 	struct ptychite_server *server = notif->server;
 
 	sd_bus_emit_signal(server->bus, service_path, service_interface, "NotificationClosed", "uu", notif->id, reason);
 }
 
-void notify_action_invoked(struct ptychite_notification_action *action, const char *activation_token) {
+void ptychite_dbus_notify_action_invoked(struct ptychite_notification_action *action, const char *activation_token) {
 	if (!action->notification->actions_enabled) {
 		// Actions are disabled for this notification, bail.
 		return;

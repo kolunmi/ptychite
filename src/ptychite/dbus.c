@@ -21,7 +21,7 @@ static int handle_dbus(int fd, uint32_t mask, void *data) {
 
 static const char service_name[] = "org.freedesktop.Notifications";
 
-int init_dbus(struct ptychite_server *server) {
+int ptychite_dbus_init(struct ptychite_server *server) {
 	int ret = 0;
 	server->bus = NULL;
 	server->xdg_slot = NULL;
@@ -32,7 +32,7 @@ int init_dbus(struct ptychite_server *server) {
 		goto err;
 	}
 
-	ret = init_dbus_xdg(server);
+	ret = ptychite_dbus_init_xdg(server);
 	if (ret < 0) {
 		fprintf(stderr, "Failed to initialize XDG interface: %s\n", strerror(-ret));
 		goto err;
@@ -56,12 +56,12 @@ int init_dbus(struct ptychite_server *server) {
 	return 0;
 
 err:
-	finish_dbus(server);
+	ptychite_dbus_finish(server);
 	server->dbus_active = false;
 	return -1;
 }
 
-void finish_dbus(struct ptychite_server *server) {
+void ptychite_dbus_finish(struct ptychite_server *server) {
 	sd_bus_slot_unref(server->xdg_slot);
 	sd_bus_flush_close_unref(server->bus);
 }

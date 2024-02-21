@@ -943,7 +943,7 @@ int ptychite_server_init_and_run(struct ptychite_server *server, struct ptychite
 		return -1;
 	}
 
-	if (!init_dbus(server)) {
+	if (!ptychite_dbus_init(server)) {
 		wlr_log(WLR_INFO, "Successfully initialized dbus.");
 	} else {
 		wlr_log(WLR_ERROR, "Could not initialize dbus.");
@@ -965,7 +965,7 @@ int ptychite_server_init_and_run(struct ptychite_server *server, struct ptychite
 	wl_display_destroy(server->display);
 
 	if (server->dbus_active) {
-		finish_dbus(server);
+		ptychite_dbus_finish(server);
 	}
 
 	return 0;

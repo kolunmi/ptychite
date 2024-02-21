@@ -156,7 +156,7 @@ void ptychite_control_draw_auto(struct ptychite_control *control) {
 
 void ptychite_control_show(struct ptychite_control *control) {
 	if (control->base.server->dbus_active) {
-		close_all_notifications(control->base.server, PTYCHITE_NOTIFICATION_CLOSE_EXPIRED);
+		ptychite_server_close_all_notifications(control->base.server, PTYCHITE_NOTIFICATION_CLOSE_EXPIRED);
 	}
 
 	ptychite_control_draw_auto(control);
