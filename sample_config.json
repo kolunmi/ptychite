@@ -5,7 +5,7 @@
 			"delay":600
 		},
 		"xkb":{
-			"options":""
+			"options":"ctrl:swapcaps"
 		},
 		"chords":[
 			{
@@ -22,6 +22,13 @@
 			},
 			{
 				"pattern":"S-Return",
+				"action":[
+					"spawn",
+					"foot"
+				]
+			},
+			{
+				"pattern":"Sh-S-Return",
 				"action":[
 					"spawn",
 					"foot"
@@ -99,6 +106,30 @@
 				"action":[
 					"swap_front"
 				]
+			},
+			{
+				"pattern":"S-Tab",
+				"action":[
+					"switch_app"
+				]
+			},
+			{
+				"pattern":"S-comma",
+				"action":[
+					"switch_app"
+				]
+			},
+			{
+				"pattern":"S-period",
+				"action":[
+					"switch_app_instance"
+				]
+			},
+			{
+				"pattern":"S-grave",
+				"action":[
+					"switch_app_instance"
+				]
 			}
 		]
 	},
@@ -110,7 +141,8 @@
 			"background":"#000000ff",
 			"accent":"#353535ff",
 			"gray1":"#464646ff",
-			"gray2":"#9a9a9aff",
+			"gray2":"#595959ff",
+			"gray3":"#9a9a9aff",
 			"border":"#999999ff",
 			"separator":"#7f7f7fff",
 			"chord":"#cc9933ff"
