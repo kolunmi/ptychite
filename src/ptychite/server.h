@@ -93,6 +93,7 @@ struct ptychite_server {
 
 	bool dbus_active;
 	sd_bus *bus;
+	sd_bus_slot *ptychite_slot;
 	sd_bus_slot *xdg_slot;
 
 	uint32_t last_id;

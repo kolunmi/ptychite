@@ -139,6 +139,7 @@ executable(
     'src/ptychite/windows/notification.c',
     'src/ptychite/windows/switcher.c',
 
+    'src/ptychite/dbus/ptychite.c',
     'src/ptychite/dbus/xdg_notification.c',
   ],
   include_directories: [include_directories('.')],
@@ -170,6 +171,7 @@ executable(
     client_protos,
     wayland_client,
     json,
+    sdbus,
   ],
   install: true,
 )

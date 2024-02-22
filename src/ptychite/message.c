@@ -1,10 +1,10 @@
 #include "compositor.h"
 #include "config.h"
 #include "json.h"
+#include "monitor.h"
 #include "ptychite-message-unstable-v1-protocol.h"
 #include "server.h"
 #include "view.h"
-#include "monitor.h"
 
 static int protocol_json_get_mode_convert_to_native(
 		enum zptychite_message_v1_json_get_mode mode, enum ptychite_json_get_mode *mode_out) {
@@ -92,12 +92,6 @@ static void message_get_property(
 	free(string);
 }
 
-static struct json_object *view_describe(struct ptychite_view *view) {
-	struct json_object *description = json_object_new_object();
-	if (!description) {
-		return NULL;
-	}
-
 #define JSON_OBJECT_ADD_MEMBER_OR_RETURN(object, member, key, type, value) \
 	if (!(member = json_object_new_##type(value))) { \
 		json_object_put(object); \
@@ -109,6 +103,12 @@ static struct json_object *view_describe(struct ptychite_view *view) {
 		return NULL; \
 	}
 
+static struct json_object *view_describe(struct ptychite_view *view) {
+	struct json_object *description = json_object_new_object();
+	if (!description) {
+		return NULL;
+	}
+
 	struct json_object *member;
 	JSON_OBJECT_ADD_MEMBER_OR_RETURN(description, member, "appid", string, view->xdg_toplevel->app_id)
 	JSON_OBJECT_ADD_MEMBER_OR_RETURN(description, member, "title", string, view->xdg_toplevel->title)
@@ -116,8 +116,6 @@ static struct json_object *view_describe(struct ptychite_view *view) {
 	JSON_OBJECT_ADD_MEMBER_OR_RETURN(description, member, "y", int, view->element.scene_tree->node.y)
 	JSON_OBJECT_ADD_MEMBER_OR_RETURN(description, member, "width", int, view->element.width)
 	JSON_OBJECT_ADD_MEMBER_OR_RETURN(description, member, "height", int, view->element.height)
-
-#undef JSON_OBJECT_ADD_MEMBER_OR_RETURN
 
 	return description;
 }

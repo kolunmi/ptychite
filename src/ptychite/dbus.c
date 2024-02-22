@@ -19,8 +19,6 @@ static int handle_dbus(int fd, uint32_t mask, void *data) {
 	return 0;
 }
 
-static const char service_name[] = "org.freedesktop.Notifications";
-
 int ptychite_dbus_init(struct ptychite_server *server) {
 	int ret = 0;
 	server->bus = NULL;
@@ -32,13 +30,18 @@ int ptychite_dbus_init(struct ptychite_server *server) {
 		goto err;
 	}
 
+	ret = init_dbus_ptychite(server);
+	if (ret < 0) {
+		fprintf(stderr, "Failed to initialize Ptychite interface: %s\n", strerror(-ret));
+		goto err;
+	}
 	ret = ptychite_dbus_init_xdg(server);
 	if (ret < 0) {
 		fprintf(stderr, "Failed to initialize XDG interface: %s\n", strerror(-ret));
 		goto err;
 	}
 
-	ret = sd_bus_request_name(server->bus, service_name, 0);
+	ret = sd_bus_request_name(server->bus, "org.freedesktop.Notifications", 0);
 	if (ret < 0) {
 		fprintf(stderr, "Failed to acquire service name: %s\n", strerror(-ret));
 		if (ret == -EEXIST) {
@@ -63,5 +66,6 @@ err:
 
 void ptychite_dbus_finish(struct ptychite_server *server) {
 	sd_bus_slot_unref(server->xdg_slot);
+	sd_bus_slot_unref(server->ptychite_slot);
 	sd_bus_flush_close_unref(server->bus);
 }

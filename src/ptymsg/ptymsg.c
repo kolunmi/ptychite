@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <systemd/sd-bus.h>
 #include <wayland-client-core.h>
 #include <wayland-client-protocol.h>
 #include <wayland-client.h>
@@ -122,11 +123,61 @@ static const struct wl_registry_listener registry_listener = {
 		.global_remove = registry_handle_global_remove,
 };
 
+static void do_dbus(struct ptymsg_state *state) {
+	sd_bus *bus = NULL;
+	sd_bus_message *reply = NULL;
+
+	int ret = sd_bus_open_user(&bus);
+
+	if (ret < 0) {
+		fprintf(stderr, "failed to connect to system bus: %s\n", strerror(-ret));
+		goto finish;
+	}
+
+	ret = sd_bus_call_method(bus,
+			"org.freedesktop.Notifications", // Service to call
+			"/am/kolunmi/Ptychite", // Object path
+			"am.kolunmi.Ptychite", // Interface name
+			"DumpApplications", // Method name
+			NULL, // Error object
+			&reply, // Response message object
+			NULL);
+	if (ret < 0) {
+		fprintf(stderr, "Failed to call method: %s\n", strerror(-ret));
+		goto finish;
+	}
+
+	const char *json;
+	ret = sd_bus_message_read(reply, "s", &json);
+	if (ret < 0) {
+		fprintf(stderr, "Failed to parse message: %s\n", strerror(-ret));
+		goto finish;
+	}
+
+	fprintf(stdout, "%s\n", json);
+
+finish:
+	if (bus) {
+		sd_bus_unref(bus);
+	}
+	if (reply) {
+		sd_bus_message_unref(reply);
+	}
+}
+
 int main(int argc, char **argv) {
 	struct ptymsg_state state = {0};
 	wl_list_init(&state.monitors);
 	wl_list_init(&state.callback_datas);
 	state.exit_code = 0;
+
+	int i = 1;
+	if (argc > 1) {
+		if (!strcmp(argv[i], "dump-apps")) {
+			do_dbus(&state);
+			i++;
+		}
+	}
 
 	if (!(state.display = wl_display_connect(NULL))) {
 		fprintf(stderr, "could not connect to display\n");
@@ -143,8 +194,7 @@ int main(int argc, char **argv) {
 
 	wl_display_roundtrip(state.display);
 
-	int i;
-	for (i = 1; i < argc; i++) {
+	for (; i < argc; i++) {
 		struct zptychite_message_callback_v1 *callback = NULL;
 		struct callback_data *callback_data = calloc(1, sizeof(struct callback_data));
 		if (!callback_data) {

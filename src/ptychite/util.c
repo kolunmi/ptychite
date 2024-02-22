@@ -348,7 +348,7 @@ bool ptychite_hash_map_iterate(struct ptychite_hash_map *map, void *user_data, p
         entry = map->table.entries + i;
 
         if (!ptychite_hash_table_entry_is_filled(entry) || ptychite_hash_table_entry_is_deleted(entry)) continue;
-        if (iterate(entry->data, user_data)) break;
+        if (iterate(entry->data, user_data)) return false;
     }
 
     return true;
