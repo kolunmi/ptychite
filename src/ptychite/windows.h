@@ -151,6 +151,15 @@ struct ptychite_notification {
 	struct ptychite_image_data *image_data;
 
 	struct wl_event_source *timer;
+
+	struct {
+		struct ptychite_mouse_region close;
+	} regions;
+
+	struct {
+		struct ptychite_mouse_region region;
+		struct ptychite_mouse_region close;
+	} control_regions;
 };
 
 extern const struct ptychite_window_impl ptychite_notification_window_impl;

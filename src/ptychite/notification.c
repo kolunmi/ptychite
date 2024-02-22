@@ -330,6 +330,8 @@ void ptychite_server_arrange_notifications(struct ptychite_server *server) {
 	struct ptychite_notification *notif;
 	wl_list_for_each(notif, &server->notifications, link) {
 		wlr_scene_node_set_position(&notif->base.element.scene_tree->node, x, y);
-		y += notif->base.element.height;
+		y += notif->base.element.height + 10;
 	}
+
+	ptychite_server_check_cursor(server);
 }

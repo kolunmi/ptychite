@@ -1,7 +1,8 @@
 #include "draw.h"
 #include "macros.h"
 
-void ptychite_cairo_draw_rounded_rect(cairo_t *cairo, double x, double y, double width, double height, double corner_radius) {
+void ptychite_cairo_draw_rounded_rect(
+		cairo_t *cairo, double x, double y, double width, double height, double corner_radius) {
 	cairo_new_sub_path(cairo);
 
 	cairo_arc(cairo, x + width - corner_radius, y + corner_radius, corner_radius, -PI / 2, 0);
@@ -92,8 +93,8 @@ int ptychite_cairo_draw_text(cairo_t *cairo, PangoFontDescription *font, const c
 	return 0;
 }
 
-int ptychite_cairo_get_text_size(cairo_t *cairo, PangoFontDescription *font, const char *text, double scale, bool markup,
-		int *width, int *height) {
+int ptychite_cairo_get_text_size(cairo_t *cairo, PangoFontDescription *font, const char *text, double scale,
+		bool markup, int *width, int *height) {
 	PangoLayout *layout = ptychite_cairo_get_pango_layout(cairo, font, text, scale, markup);
 	if (!layout) {
 		return -1;
@@ -114,9 +115,9 @@ int ptychite_cairo_get_text_size(cairo_t *cairo, PangoFontDescription *font, con
 	return 0;
 }
 
-int ptychite_cairo_draw_text_center(cairo_t *cairo, int y, int geom_x, int geom_width, int *x_out, PangoFontDescription *font,
-		const char *text, float foreground[4], float background[4], double scale, bool markup, int *width,
-		int *height) {
+int ptychite_cairo_draw_text_center(cairo_t *cairo, int y, int geom_x, int geom_width, int *x_out,
+		PangoFontDescription *font, const char *text, float foreground[4], float background[4], double scale,
+		bool markup, int *width, int *height) {
 	int w, h;
 	if (!ptychite_cairo_get_text_size(cairo, font, text, scale, markup, &w, &h)) {
 		if (width) {
@@ -137,8 +138,9 @@ int ptychite_cairo_draw_text_center(cairo_t *cairo, int y, int geom_x, int geom_
 	return -1;
 }
 
-int ptychite_cairo_draw_text_right(cairo_t *cairo, int y, int right_x, int *x_out, PangoFontDescription *font, const char *text,
-		float foreground[4], float background[4], double scale, bool markup, int *width, int *height) {
+int ptychite_cairo_draw_text_right(cairo_t *cairo, int y, int right_x, int *x_out, PangoFontDescription *font,
+		const char *text, float foreground[4], float background[4], double scale, bool markup, int *width,
+		int *height) {
 	int w, h;
 	if (!ptychite_cairo_get_text_size(cairo, font, text, scale, markup, &w, &h)) {
 		if (width) {
@@ -157,4 +159,21 @@ int ptychite_cairo_draw_text_right(cairo_t *cairo, int y, int right_x, int *x_ou
 	}
 
 	return -1;
+}
+
+void ptychite_cairo_draw_x(cairo_t *cairo, struct wlr_box box, float color[4], float bg[4], int line_width) {
+	if (bg) {
+		cairo_arc(cairo, box.x + box.width / 2.0, box.y + box.height / 2.0, box.width, 0, PI * 2);
+		cairo_set_source_rgba(cairo, bg[0], bg[1], bg[2], bg[3]);
+		cairo_fill(cairo);
+	}
+
+	cairo_move_to(cairo, box.x, box.y);
+	cairo_line_to(cairo, box.x + box.width, box.y + box.height);
+	cairo_move_to(cairo, box.x, box.y + box.height);
+	cairo_line_to(cairo, box.x + box.width, box.y);
+
+	cairo_set_line_width(cairo, line_width);
+	cairo_set_source_rgba(cairo, color[0], color[1], color[2], color[3]);
+	cairo_stroke(cairo);
 }

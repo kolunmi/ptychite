@@ -62,6 +62,7 @@ struct ptychite_config {
 			float accent[4];
 			float gray1[4];
 			float gray2[4];
+			float gray3[4];
 			float border[4];
 			float separator[4];
 			float chord[4];

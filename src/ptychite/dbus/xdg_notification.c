@@ -418,7 +418,8 @@ int ptychite_dbus_init_xdg(struct ptychite_server *server) {
 			server->bus, &server->xdg_slot, service_path, service_interface, service_vtable, server);
 }
 
-void ptychite_dbus_notify_notification_closed(struct ptychite_notification *notif, enum ptychite_notification_close_reason reason) {
+void ptychite_dbus_notify_notification_closed(
+		struct ptychite_notification *notif, enum ptychite_notification_close_reason reason) {
 	struct ptychite_server *server = notif->server;
 
 	sd_bus_emit_signal(server->bus, service_path, service_interface, "NotificationClosed", "uu", notif->id, reason);

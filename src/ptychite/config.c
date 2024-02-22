@@ -531,6 +531,15 @@ static struct json_object *config_get_panel_colors_gray2(struct ptychite_config 
 	return arrcolor_convert_to_json(config->panel.colors.gray2);
 }
 
+static int config_set_panel_colors_gray3(
+		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
+	return config_set_color_helper(config, value, mode, config->panel.colors.gray3, error);
+}
+
+static struct json_object *config_get_panel_colors_gray3(struct ptychite_config *config) {
+	return arrcolor_convert_to_json(config->panel.colors.gray3);
+}
+
 static int config_set_panel_colors_border(
 		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
 	return config_set_color_helper(config, value, mode, config->panel.colors.border, error);
@@ -887,6 +896,7 @@ struct property_entry config_property_table[] = {
 		{(char *[]){"panel", "colors", "accent", NULL}, config_set_panel_colors_accent, config_get_panel_colors_accent},
 		{(char *[]){"panel", "colors", "gray1", NULL}, config_set_panel_colors_gray1, config_get_panel_colors_gray1},
 		{(char *[]){"panel", "colors", "gray2", NULL}, config_set_panel_colors_gray2, config_get_panel_colors_gray2},
+		{(char *[]){"panel", "colors", "gray3", NULL}, config_set_panel_colors_gray3, config_get_panel_colors_gray3},
 		{(char *[]){"panel", "colors", "border", NULL}, config_set_panel_colors_border, config_get_panel_colors_border},
 		{(char *[]){"panel", "colors", "separator", NULL}, config_set_panel_colors_separator,
 				config_get_panel_colors_separator},
@@ -1161,10 +1171,14 @@ int ptychite_config_init(struct ptychite_config *config, struct ptychite_composi
 	config->panel.colors.gray1[1] = 0.278;
 	config->panel.colors.gray1[2] = 0.278;
 	config->panel.colors.gray1[3] = 1.0;
-	config->panel.colors.gray2[0] = 0.604;
-	config->panel.colors.gray2[1] = 0.604;
-	config->panel.colors.gray2[2] = 0.604;
+	config->panel.colors.gray2[0] = 0.35;
+	config->panel.colors.gray2[1] = 0.35;
+	config->panel.colors.gray2[2] = 0.35;
 	config->panel.colors.gray2[3] = 1.0;
+	config->panel.colors.gray3[0] = 0.604;
+	config->panel.colors.gray3[1] = 0.604;
+	config->panel.colors.gray3[2] = 0.604;
+	config->panel.colors.gray3[3] = 1.0;
 	config->panel.colors.border[0] = 0.6;
 	config->panel.colors.border[1] = 0.6;
 	config->panel.colors.border[2] = 0.6;

@@ -49,20 +49,7 @@ static void title_bar_draw(struct ptychite_window *window, cairo_t *cairo, int s
 	cairo_set_source_rgba(cairo, background[0], background[1], background[2], background[3]);
 	cairo_fill(cairo);
 
-	if (title_bar->regions.close.entered) {
-		cairo_arc(cairo, close_draw_box.x + close_draw_box.width / 2.0, close_draw_box.y + close_draw_box.height / 2.0,
-				close_draw_box.width, 0, PI * 2);
-		cairo_set_source_rgba(cairo, close[0], close[1], close[2], close[3]);
-		cairo_fill(cairo);
-	}
-
-	cairo_move_to(cairo, close_draw_box.x, close_draw_box.y);
-	cairo_line_to(cairo, close_draw_box.x + close_draw_box.width, close_draw_box.y + close_draw_box.height);
-	cairo_move_to(cairo, close_draw_box.x, close_draw_box.y + close_draw_box.height);
-	cairo_line_to(cairo, close_draw_box.x + close_draw_box.width, close_draw_box.y);
-
-	cairo_set_line_width(cairo, font_height / 10.0);
-	cairo_set_source_rgba(cairo, foreground[0], foreground[1], foreground[2], foreground[3]);
+	ptychite_cairo_draw_x(cairo, close_draw_box, foreground, title_bar->regions.close.entered ? close : NULL, font_height / 10.0);
 	cairo_stroke(cairo);
 }
 
