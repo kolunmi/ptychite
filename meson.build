@@ -30,8 +30,6 @@ pango          = dependency('pango')
 pangocairo     = dependency('pangocairo')
 librsvg        = dependency('librsvg-2.0')
 sdbus          = dependency('libsystemd')
-# libup          = dependency('upower-glib')
-# libnm          = dependency('libnm')
 math           = cc.find_library('m')
 
 wl_protocol_dir = wayland_protos.get_variable('pkgdatadir')
@@ -156,8 +154,6 @@ executable(
     pangocairo,
     librsvg,
     sdbus,
-    # libup,
-    # libnm,
     math,
   ],
   install: true,
