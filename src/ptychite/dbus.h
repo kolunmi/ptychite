@@ -14,4 +14,6 @@ int ptychite_dbus_init_xdg(struct ptychite_server *server);
 void ptychite_dbus_notify_notification_closed(struct ptychite_notification *notif, enum ptychite_notification_close_reason reason);
 void ptychite_dbus_notify_action_invoked(struct ptychite_notification_action *action, const char *activation_token);
 
+int ptychite_dbus_init_nm(struct ptychite_server *server);
+
 #endif

@@ -931,6 +931,15 @@ int ptychite_server_init_and_run(struct ptychite_server *server, struct ptychite
 	}
 	server_time_tick_update(server);
 
+	if (!ptychite_dbus_init(server)) {
+		wlr_log(WLR_INFO, "Successfully initialized dbus.");
+	} else {
+		wlr_log(WLR_ERROR, "Could not initialize dbus.");
+	}
+
+	wlr_log(WLR_INFO, "Getting applications.");
+	ptychite_server_init_applications(server);
+
 	const char *socket = wl_display_add_socket_auto(server->display);
 	if (!socket) {
 		wlr_backend_destroy(server->backend);
@@ -942,15 +951,6 @@ int ptychite_server_init_and_run(struct ptychite_server *server, struct ptychite
 		wl_display_destroy(server->display);
 		return -1;
 	}
-
-	if (!ptychite_dbus_init(server)) {
-		wlr_log(WLR_INFO, "Successfully initialized dbus.");
-	} else {
-		wlr_log(WLR_ERROR, "Could not initialize dbus.");
-	}
-
-	wlr_log(WLR_INFO, "Getting applications.");
-	ptychite_server_init_applications(server);
 
 	setenv("WAYLAND_DISPLAY", socket, true);
 

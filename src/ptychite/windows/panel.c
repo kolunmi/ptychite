@@ -346,6 +346,15 @@ static void panel_draw(
 		x += font_height;
 	}
 
+	x = surface_width - font_height;
+	int width;
+
+	if (server->dbus_active &&
+			!ptychite_cairo_draw_text_right(cairo, y, x, NULL, font->font,
+					server->internet ? "Net Up" : "Net Down", foreground, NULL, scale, false, &width, NULL)) {
+		x -= width + font_height;
+	}
+
 	if (server->keys.size) {
 		struct ptychite_chord chord = {
 				.keys = server->keys.data,
@@ -353,8 +362,8 @@ static void panel_draw(
 		};
 		char *chord_string = ptychite_chord_get_pattern(&chord);
 		if (chord_string) {
-			ptychite_cairo_draw_text_right(cairo, y, surface_width - font_height, NULL, font->font, chord_string,
-					foreground, chord_color, scale, false, NULL, NULL);
+			ptychite_cairo_draw_text_right(
+					cairo, y, x, NULL, font->font, chord_string, foreground, chord_color, scale, false, NULL, NULL);
 			free(chord_string);
 		}
 	}

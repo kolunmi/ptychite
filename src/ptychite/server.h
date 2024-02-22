@@ -96,6 +96,8 @@ struct ptychite_server {
 	sd_bus_slot *ptychite_slot;
 	sd_bus_slot *xdg_slot;
 
+	sd_bus *system_bus;
+
 	uint32_t last_id;
 	struct wl_list notifications;
 	struct wl_list history;
@@ -104,6 +106,8 @@ struct ptychite_server {
 	struct ptychite_hash_map icons;
 
 	struct ptychite_switcher switcher;
+
+	bool internet;
 };
 
 struct ptychite_view *ptychite_server_get_top_view(struct ptychite_server *server);
