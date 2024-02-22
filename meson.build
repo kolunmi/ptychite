@@ -142,6 +142,7 @@ executable(
     'src/ptychite/dbus/ptychite.c',
     'src/ptychite/dbus/xdg_notification.c',
     'src/ptychite/dbus/network_manager.c',
+    'src/ptychite/dbus/upower.c',
   ],
   include_directories: [include_directories('.')],
   dependencies: [

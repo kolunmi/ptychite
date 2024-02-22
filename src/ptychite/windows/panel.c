@@ -349,10 +349,19 @@ static void panel_draw(
 	x = surface_width - font_height;
 	int width;
 
-	if (server->dbus_active &&
-			!ptychite_cairo_draw_text_right(cairo, y, x, NULL, font->font,
-					server->internet ? "Net Up" : "Net Down", foreground, NULL, scale, false, &width, NULL)) {
-		x -= width + font_height;
+	if (server->dbus_active) {
+		if (!ptychite_cairo_draw_text_right(cairo, y, x, NULL, font->font, server->internet ? "Net Up" : "Net Down",
+					foreground, NULL, scale, false, &width, NULL)) {
+			x -= width + font_height;
+		}
+		if (server->battery.enabled) {
+			char buf[32];
+			snprintf(buf, sizeof(buf), "BAT %d%%", (int)server->battery.percent);
+			if (!ptychite_cairo_draw_text_right(
+						cairo, y, x, NULL, font->font, buf, foreground, NULL, scale, false, &width, NULL)) {
+				x -= width + font_height;
+			}
+		}
 	}
 
 	if (server->keys.size) {

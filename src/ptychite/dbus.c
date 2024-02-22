@@ -28,7 +28,7 @@ int ptychite_dbus_init(struct ptychite_server *server) {
 
 	ret = sd_bus_open_user(&server->bus);
 	if (ret < 0) {
-		fprintf(stderr, "Failed to connect to user bus: %s\n", strerror(-ret));
+		fprintf(stderr, "Failed to connect to the user bus: %s\n", strerror(-ret));
 		goto err;
 	}
 
@@ -54,13 +54,19 @@ int ptychite_dbus_init(struct ptychite_server *server) {
 
 	ret = sd_bus_open_system(&server->system_bus);
 	if (ret < 0) {
-		fprintf(stderr, "Failed to connect to system bus: %s\n", strerror(-ret));
+		fprintf(stderr, "Failed to connect to the system bus: %s\n", strerror(-ret));
 		goto err;
 	}
 
 	ret = ptychite_dbus_init_nm(server);
 	if (ret < 0) {
 		fprintf(stderr, "Failed to connect to NetworkManager: %s\n", strerror(-ret));
+		goto err;
+	}
+
+	ret = ptychite_dbus_init_upower(server);
+	if (ret < 0) {
+		fprintf(stderr, "Failed to connect to UPower: %s\n", strerror(-ret));
 		goto err;
 	}
 
