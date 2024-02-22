@@ -30,7 +30,7 @@ int ptychite_dbus_init(struct ptychite_server *server) {
 		goto err;
 	}
 
-	ret = init_dbus_ptychite(server);
+	ret = ptychite_dbus_init_ptychite(server);
 	if (ret < 0) {
 		fprintf(stderr, "Failed to initialize Ptychite interface: %s\n", strerror(-ret));
 		goto err;

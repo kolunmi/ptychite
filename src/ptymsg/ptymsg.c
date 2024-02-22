@@ -128,7 +128,6 @@ static void do_dbus(struct ptymsg_state *state) {
 	sd_bus_message *reply = NULL;
 
 	int ret = sd_bus_open_user(&bus);
-
 	if (ret < 0) {
 		fprintf(stderr, "failed to connect to system bus: %s\n", strerror(-ret));
 		goto finish;
