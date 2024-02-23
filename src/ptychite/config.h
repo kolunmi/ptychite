@@ -7,8 +7,9 @@
 #include <stdint.h>
 #include <wayland-util.h>
 
-#include "json.h"
+#include "action.h"
 #include "chord.h"
+#include "json.h"
 
 enum ptychite_property_set_mode {
 	PTYCHITE_PROPERTY_SET_OVERWRITE,
@@ -39,6 +40,31 @@ struct ptychite_font {
 	bool markup;
 };
 
+enum ptychite_panel_module_type {
+	PTYCHITE_PANEL_MODULE_LOGO,
+	PTYCHITE_PANEL_MODULE_WINDOWICON,
+	PTYCHITE_PANEL_MODULE_WORKSPACES,
+	PTYCHITE_PANEL_MODULE_DATE,
+	PTYCHITE_PANEL_MODULE_CHORD,
+	PTYCHITE_PANEL_MODULE_BATTERY,
+	PTYCHITE_PANEL_MODULE_NETWORK,
+	PTYCHITE_PANEL_MODULE_USER,
+};
+
+struct ptychite_panel_module {
+	enum ptychite_panel_module_type type;
+	struct {
+		char **cmd_args;
+		int interval;
+		struct ptychite_action *action;
+	} user;
+};
+
+struct ptychite_panel_section {
+	struct ptychite_panel_module *modules;
+	int modules_l;
+};
+
 struct ptychite_config {
 	struct ptychite_compositor *compositor;
 
@@ -56,6 +82,11 @@ struct ptychite_config {
 	struct {
 		bool enabled;
 		struct ptychite_font font;
+		struct {
+			struct ptychite_panel_section left;
+			struct ptychite_panel_section center;
+			struct ptychite_panel_section right;
+		} sections;
 		struct {
 			float foreground[4];
 			float background[4];

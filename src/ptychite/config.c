@@ -1155,6 +1155,29 @@ int ptychite_config_init(struct ptychite_config *config, struct ptychite_composi
 	if (font_fill_from_string(&config->panel.font, "monospace bold 15", &error)) {
 		return -1;
 	}
+
+	if (!(config->panel.sections.left.modules = calloc(3, sizeof(struct ptychite_panel_module)))) {
+		goto err;
+	}
+	config->panel.sections.left.modules_l = 3;
+	config->panel.sections.left.modules[0].type = PTYCHITE_PANEL_MODULE_LOGO;
+	config->panel.sections.left.modules[1].type = PTYCHITE_PANEL_MODULE_WINDOWICON;
+	config->panel.sections.left.modules[2].type = PTYCHITE_PANEL_MODULE_WORKSPACES;
+
+	if (!(config->panel.sections.center.modules = calloc(1, sizeof(struct ptychite_panel_module)))) {
+		goto err;
+	}
+	config->panel.sections.center.modules_l = 1;
+	config->panel.sections.center.modules[0].type = PTYCHITE_PANEL_MODULE_DATE;
+
+	if (!(config->panel.sections.right.modules = calloc(3, sizeof(struct ptychite_panel_module)))) {
+		goto err;
+	}
+	config->panel.sections.right.modules_l = 3;
+	config->panel.sections.right.modules[0].type = PTYCHITE_PANEL_MODULE_CHORD;
+	config->panel.sections.right.modules[1].type = PTYCHITE_PANEL_MODULE_NETWORK;
+	config->panel.sections.right.modules[2].type = PTYCHITE_PANEL_MODULE_BATTERY;
+
 	config->panel.colors.background[0] = 0.0;
 	config->panel.colors.background[1] = 0.0;
 	config->panel.colors.background[2] = 0.0;
@@ -1217,6 +1240,10 @@ int ptychite_config_init(struct ptychite_config *config, struct ptychite_composi
 	config->tiling.gaps = 10;
 
 	return 0;
+
+err:
+	ptychite_config_deinit(config);
+	return -1;
 }
 
 void ptychite_chord_binding_deinit(struct ptychite_chord_binding *chord_binding) {
@@ -1240,6 +1267,9 @@ void ptychite_config_deinit(struct ptychite_config *config) {
 	ptychite_config_wipe_chord_bindings(config);
 	wl_array_release(&config->keyboard.chords);
 	pango_font_description_free(config->panel.font.font);
+	free(config->panel.sections.left.modules);
+	free(config->panel.sections.center.modules);
+	free(config->panel.sections.right.modules);
 	free(config->panel.font.string);
 }
 

@@ -1,4 +1,5 @@
 #include <librsvg/rsvg.h>
+#include <wayland-util.h>
 
 #include "../compositor.h"
 #include "../config.h"
@@ -10,6 +11,7 @@
 #include "../util.h"
 #include "../view.h"
 #include "../windows.h"
+#include "cairo.h"
 #include "src/ptychite/applications.h"
 
 static const uint32_t ptychite_svg[] = {
@@ -247,153 +249,295 @@ static const uint32_t ptychite_svg[] = {
 		171861878,
 };
 
-static void panel_draw(
-		struct ptychite_window *window, cairo_t *cairo, int surface_width, int surface_height, float scale) {
-	struct ptychite_panel *panel = wl_container_of(window, panel, base);
-
-	struct ptychite_server *server = panel->monitor->server;
+static int get_section_width(cairo_t *cairo, struct ptychite_panel *panel, struct ptychite_panel_section *section,
+		int surface_height, float scale) {
+	struct ptychite_server *server = panel->base.server;
 	struct ptychite_config *config = server->compositor->config;
-	float *background = config->panel.colors.background;
+	struct ptychite_font *font = &config->panel.font;
+
+	int font_height = font->height * scale;
+	int x = 0;
+	int y = (surface_height - font_height) / 2;
+
+	int i;
+	for (i = 0; i < section->modules_l; i++) {
+		switch (section->modules[i].type) {
+		case PTYCHITE_PANEL_MODULE_LOGO: {
+			x += surface_height + font_height;
+			break;
+		}
+		case PTYCHITE_PANEL_MODULE_WINDOWICON: {
+			int size = surface_height - y * 2;
+			x += size;
+			break;
+		}
+		case PTYCHITE_PANEL_MODULE_WORKSPACES: {
+			x += font_height;
+			struct ptychite_workspace *workspace;
+			wl_list_for_each(workspace, &panel->monitor->workspaces, link) {
+				x += font_height;
+			}
+			break;
+		}
+		case PTYCHITE_PANEL_MODULE_DATE: {
+			if (*server->panel_date) {
+				int width;
+				if (!ptychite_cairo_get_text_size(cairo, font->font, server->panel_date, scale, false, &width, NULL)) {
+					x += width;
+				}
+				x += font_height;
+			}
+			break;
+		}
+		case PTYCHITE_PANEL_MODULE_CHORD: {
+			if (server->keys.size) {
+				struct ptychite_chord chord = {
+						.keys = server->keys.data,
+						.keys_l = server->keys.size / sizeof(struct ptychite_key),
+				};
+				/* FIXME this is done twice */
+				char *chord_string = ptychite_chord_get_pattern(&chord);
+				if (chord_string) {
+					int width;
+					if (!ptychite_cairo_get_text_size(cairo, font->font, chord_string, scale, false, &width, NULL)) {
+						x += width;
+					}
+					free(chord_string);
+				}
+				x += font_height;
+			}
+			break;
+		}
+		case PTYCHITE_PANEL_MODULE_NETWORK: {
+			if (server->dbus_active) {
+				int width;
+				if (!ptychite_cairo_get_text_size(
+							cairo, font->font, server->internet ? "Net Up" : "Net Down", scale, false, &width, NULL)) {
+					x += width;
+				}
+			}
+			break;
+		}
+		case PTYCHITE_PANEL_MODULE_BATTERY: {
+			if (server->dbus_active && server->battery.enabled) {
+				char buf[32];
+				snprintf(buf, sizeof(buf), "BAT %d%%", (int)server->battery.percent);
+
+				int width;
+				if (!ptychite_cairo_get_text_size(cairo, font->font, buf, scale, false, &width, NULL)) {
+					x += width;
+				}
+			}
+			break;
+		}
+		default:
+			break;
+		}
+		x += font_height / 2;
+	}
+
+	return x - font_height / 2;
+}
+
+static void draw_section(cairo_t *cairo, struct ptychite_panel *panel, struct ptychite_panel_section *section, int x,
+		int surface_width, int surface_height, float scale) {
+	struct ptychite_server *server = panel->base.server;
+	struct ptychite_config *config = server->compositor->config;
+
 	float *foreground = config->panel.colors.foreground;
 	float *accent = config->panel.colors.accent;
 	float *chord_color = config->panel.colors.chord;
+
+	struct ptychite_font *font = &config->panel.font;
+	int font_height = font->height * scale;
+	int y = (surface_height - font_height) / 2;
+
+	cairo_set_source_rgba(cairo, foreground[0], foreground[1], foreground[2], foreground[3]);
+
+	int i;
+	for (i = 0; i < section->modules_l; i++) {
+		switch (section->modules[i].type) {
+		case PTYCHITE_PANEL_MODULE_LOGO: {
+			GError *error = NULL;
+			RsvgHandle *svg_handle = rsvg_handle_new_from_data((guint8 *)ptychite_svg, sizeof(ptychite_svg), &error);
+			if (svg_handle) {
+				RsvgRectangle viewport = {
+						.x = x + font_height / 2.0,
+						.y = y,
+						.width = surface_height,
+						.height = font_height,
+				};
+
+				panel->regions.shell.box = (struct wlr_box){
+						.x = x,
+						.y = 0,
+						.width = viewport.width + font_height,
+						.height = surface_height,
+				};
+				if (panel->regions.shell.entered) {
+					cairo_set_source_rgba(cairo, accent[0], accent[1], accent[2], accent[3]);
+					cairo_rectangle(cairo, panel->regions.shell.box.x, panel->regions.shell.box.y,
+							panel->regions.shell.box.width, panel->regions.shell.box.height);
+					cairo_fill(cairo);
+				}
+
+				rsvg_handle_render_document(svg_handle, cairo, &viewport, &error);
+				g_object_unref(svg_handle);
+
+				x += panel->regions.shell.box.width;
+			} else {
+				g_error_free(error);
+			}
+			break;
+		}
+		case PTYCHITE_PANEL_MODULE_WINDOWICON: {
+			int size = surface_height - y * 2;
+			do {
+				struct ptychite_view *view = ptychite_server_get_focused_view(server);
+				if (!view) {
+					break;
+				}
+
+				struct ptychite_icon *icon = ptychite_view_get_icon(view);
+				if (!icon) {
+					break;
+				}
+
+				struct wlr_box box = {
+						.x = x,
+						.y = y,
+						.width = size,
+						.height = size,
+				};
+				draw_icon(cairo, icon, box);
+
+			} while (0);
+			x += size;
+			break;
+		}
+		case PTYCHITE_PANEL_MODULE_WORKSPACES: {
+			x += font_height / 2;
+			struct ptychite_workspace *workspace;
+			wl_list_for_each(workspace, &panel->monitor->workspaces, link) {
+				workspace->region.box = (struct wlr_box){
+						.x = x - font_height / 2,
+						.y = 0,
+						.width = font_height,
+						.height = surface_height,
+				};
+
+				if (workspace->region.entered) {
+					cairo_rectangle(cairo, workspace->region.box.x, workspace->region.box.y,
+							workspace->region.box.width, workspace->region.box.height);
+					cairo_set_source_rgba(cairo, accent[0], accent[1], accent[2], accent[3]);
+					cairo_fill(cairo);
+				}
+				int radius = font_height / (workspace == panel->monitor->current_workspace ? 4 : 8);
+				cairo_arc(cairo, x, surface_height / 2.0, radius, 0, PI * 2);
+				cairo_set_source_rgba(cairo, foreground[0], foreground[1], foreground[2], foreground[3]);
+				cairo_fill(cairo);
+
+				x += font_height;
+			}
+			x -= font_height / 2;
+			break;
+		}
+		case PTYCHITE_PANEL_MODULE_DATE: {
+			if (*server->panel_date) {
+				float *bg = ((server->active_monitor == panel->monitor &&
+									 server->control->base.element.scene_tree->node.enabled) ||
+									panel->regions.time.entered)
+						? accent
+						: NULL;
+				cairo_move_to(cairo, x, y);
+				int width;
+				if (!ptychite_cairo_draw_text(
+							cairo, font->font, server->panel_date, foreground, bg, scale, false, &width, NULL)) {
+					panel->regions.time.box = (struct wlr_box){
+							.x = x,
+							.y = 0,
+							.width = width,
+							.height = surface_height,
+					};
+					x += width;
+				}
+			}
+			break;
+		}
+		case PTYCHITE_PANEL_MODULE_CHORD: {
+			if (server->keys.size) {
+				x += font_height / 2;
+				struct ptychite_chord chord = {
+						.keys = server->keys.data,
+						.keys_l = server->keys.size / sizeof(struct ptychite_key),
+				};
+				char *chord_string = ptychite_chord_get_pattern(&chord);
+				if (chord_string) {
+					cairo_move_to(cairo, x, y);
+					int width;
+					ptychite_cairo_draw_text(
+							cairo, font->font, chord_string, foreground, chord_color, scale, false, &width, NULL);
+					free(chord_string);
+					x += width;
+				}
+				x += font_height / 2;
+			}
+			break;
+		}
+		case PTYCHITE_PANEL_MODULE_NETWORK: {
+			if (server->dbus_active) {
+				cairo_move_to(cairo, x, y);
+				int width;
+				if (!ptychite_cairo_draw_text(cairo, font->font, server->internet ? "Net Up" : "Net Down", foreground,
+							NULL, scale, false, &width, NULL)) {
+					x += width;
+				}
+			}
+			break;
+		}
+		case PTYCHITE_PANEL_MODULE_BATTERY: {
+			if (server->battery.enabled) {
+				char buf[32];
+				snprintf(buf, sizeof(buf), "BAT %d%%", (int)server->battery.percent);
+
+				cairo_move_to(cairo, x, y);
+				int width;
+				if (!ptychite_cairo_draw_text(cairo, font->font, buf, foreground, NULL, scale, false, &width, NULL)) {
+					x += width;
+				}
+			}
+			break;
+		}
+		default:
+			break;
+		}
+		x += font_height / 2;
+	}
+}
+
+static void panel_draw(
+		struct ptychite_window *window, cairo_t *cairo, int surface_width, int surface_height, float scale) {
+	struct ptychite_panel *panel = wl_container_of(window, panel, base);
+	struct ptychite_server *server = panel->monitor->server;
+	struct ptychite_config *config = server->compositor->config;
+	float *background = config->panel.colors.background;
 
 	cairo_set_source_rgba(cairo, background[0], background[1], background[2], background[3]);
 	cairo_rectangle(cairo, 0, 0, surface_width, surface_height);
 	cairo_fill(cairo);
 
-	cairo_set_source_rgba(cairo, foreground[0], foreground[1], foreground[2], foreground[3]);
 	struct ptychite_font *font = &config->panel.font;
 	int font_height = font->height * scale;
 
-	int x = font_height / 2;
-	int y = (surface_height - font_height) / 2;
-
-	GError *error = NULL;
-	RsvgHandle *svg_handle = rsvg_handle_new_from_data((guint8 *)ptychite_svg, sizeof(ptychite_svg), &error);
-	if (svg_handle) {
-		RsvgRectangle viewport = {
-				.x = x,
-				.y = y,
-				.width = surface_height,
-				.height = font_height,
-		};
-
-		panel->regions.shell.box = (struct wlr_box){
-				.x = 0,
-				.y = 0,
-				.width = viewport.width + font_height,
-				.height = surface_height,
-		};
-		if (panel->regions.shell.entered) {
-			cairo_set_source_rgba(cairo, accent[0], accent[1], accent[2], accent[3]);
-			cairo_rectangle(cairo, panel->regions.shell.box.x, panel->regions.shell.box.y,
-					panel->regions.shell.box.width, panel->regions.shell.box.height);
-			cairo_fill(cairo);
-		}
-
-		rsvg_handle_render_document(svg_handle, cairo, &viewport, &error);
-		g_object_unref(svg_handle);
-
-		x += viewport.width + font_height;
-	} else {
-		g_error_free(error);
-	}
-
-	do {
-		struct ptychite_view *view = ptychite_server_get_focused_view(server);
-		if (!view) {
-			break;
-		}
-
-		struct ptychite_icon *icon = ptychite_view_get_icon(view);
-		if (!icon) {
-			break;
-		}
-
-		int size = surface_height - y * 2;
-		struct wlr_box box = {
-				.x = x,
-				.y = y,
-				.width = size,
-				.height = size,
-		};
-		draw_icon(cairo, icon, box);
-
-		x += box.width + font_height;
-	} while (0);
-
-	struct ptychite_workspace *workspace;
-	wl_list_for_each(workspace, &panel->monitor->workspaces, link) {
-		workspace->region.box = (struct wlr_box){
-				.x = x - font_height / 2,
-				.y = 0,
-				.width = font_height,
-				.height = surface_height,
-		};
-
-		if (workspace->region.entered) {
-			cairo_rectangle(cairo, workspace->region.box.x, workspace->region.box.y, workspace->region.box.width,
-					workspace->region.box.height);
-			cairo_set_source_rgba(cairo, accent[0], accent[1], accent[2], accent[3]);
-			cairo_fill(cairo);
-		}
-		int radius = font_height / (workspace == panel->monitor->current_workspace ? 4 : 8);
-		cairo_arc(cairo, x, surface_height / 2.0, radius, 0, PI * 2);
-		cairo_set_source_rgba(cairo, foreground[0], foreground[1], foreground[2], foreground[3]);
-		cairo_fill(cairo);
-
-		x += font_height;
-	}
-
-	x = surface_width - font_height;
-	int width;
-
-	if (server->dbus_active) {
-		if (!ptychite_cairo_draw_text_right(cairo, y, x, NULL, font->font, server->internet ? "Net Up" : "Net Down",
-					foreground, NULL, scale, false, &width, NULL)) {
-			x -= width + font_height;
-		}
-		if (server->battery.enabled) {
-			char buf[32];
-			snprintf(buf, sizeof(buf), "BAT %d%%", (int)server->battery.percent);
-			if (!ptychite_cairo_draw_text_right(
-						cairo, y, x, NULL, font->font, buf, foreground, NULL, scale, false, &width, NULL)) {
-				x -= width + font_height;
-			}
-		}
-	}
-
-	if (server->keys.size) {
-		struct ptychite_chord chord = {
-				.keys = server->keys.data,
-				.keys_l = server->keys.size / sizeof(struct ptychite_key),
-		};
-		char *chord_string = ptychite_chord_get_pattern(&chord);
-		if (chord_string) {
-			ptychite_cairo_draw_text_right(
-					cairo, y, x, NULL, font->font, chord_string, foreground, chord_color, scale, false, NULL, NULL);
-			free(chord_string);
-		}
-	}
-
-	if (*server->panel_date) {
-		float *bg =
-				((server->active_monitor == panel->monitor && server->control->base.element.scene_tree->node.enabled) ||
-						panel->regions.time.entered)
-				? accent
-				: NULL;
-		int width;
-		if (!ptychite_cairo_draw_text_center(cairo, y, 0, surface_width, &x, font->font, server->panel_date, foreground,
-					bg, scale, false, &width, NULL)) {
-			panel->regions.time.box = (struct wlr_box){
-					.x = x,
-					.y = 0,
-					.width = width,
-					.height = surface_height,
-			};
-		}
-	}
+	draw_section(cairo, panel, &config->panel.sections.left, font_height / 2, surface_width, surface_height, scale);
+	draw_section(cairo, panel, &config->panel.sections.center,
+			(surface_width - get_section_width(cairo, panel, &config->panel.sections.center, surface_height, scale)) /
+					2,
+			surface_width, surface_height, scale);
+	draw_section(cairo, panel, &config->panel.sections.right,
+			surface_width - font_height / 2 -
+					get_section_width(cairo, panel, &config->panel.sections.right, surface_height, scale),
+			surface_width, surface_height, scale);
 }
 
 static void panel_handle_pointer_enter(struct ptychite_window *window) {
