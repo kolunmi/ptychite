@@ -444,6 +444,7 @@ static void draw_section(cairo_t *cairo, struct ptychite_panel *panel, struct pt
 		}
 		case PTYCHITE_PANEL_MODULE_DATE: {
 			if (*server->panel_date) {
+				x += font_height / 2;
 				float *bg = ((server->active_monitor == panel->monitor &&
 									 server->control->base.element.scene_tree->node.enabled) ||
 									panel->regions.time.entered)
@@ -461,6 +462,7 @@ static void draw_section(cairo_t *cairo, struct ptychite_panel *panel, struct pt
 					};
 					x += width;
 				}
+				x += font_height / 2;
 			}
 			break;
 		}
