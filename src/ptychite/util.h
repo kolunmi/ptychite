@@ -12,6 +12,11 @@ struct ptychite_mouse_region {
 
 bool ptychite_mouse_region_update_state(struct ptychite_mouse_region *region, double x, double y);
 
+void ptychite_spawn(char **args);
+char *ptychite_get_command_output(const char *cmd);
+
+
+
 
 typedef uint32_t (*ptychite_hash_func)(const void *data);
 typedef int64_t (*ptychite_cmp_func)(const void *data1, const void *data2);
@@ -57,7 +62,5 @@ bool ptychite_hash_map_insert(struct ptychite_hash_map *map, const void *key, vo
 void *ptychite_hash_map_get(struct ptychite_hash_map *map, const void *key);
 void *ptychite_hash_map_remove(struct ptychite_hash_map *map, const void *key);
 bool ptychite_hash_map_iterate(struct ptychite_hash_map *map, void *user_data, ptychite_iterator_func iterate);
-
-void ptychite_spawn(char **args);
 
 #endif

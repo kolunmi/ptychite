@@ -1,7 +1,9 @@
+#define _POSIX_C_SOURCE 200809L
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <stdarg.h>
+#include <errno.h>
 #include <stdio.h>
 
 #include "util.h"
@@ -54,6 +56,31 @@ void ptychite_spawn(char **args) {
 		execvp(args[0], args);
 		exit(EXIT_SUCCESS);
 	}
+}
+
+char *ptychite_get_command_output(const char *cmd) {
+	FILE *fp = popen(cmd, "r");
+	if (!fp) {
+		return NULL;
+	}
+
+	char buf[BUFSIZ];
+	char *p = fgets(buf, sizeof(buf), fp);
+	if (pclose(fp) < 0) {
+		return NULL;
+	}
+	if (!p) {
+		return NULL;
+	}
+
+	if ((p = strchr(buf, '\n'))) {
+		*p = '\0';
+	}
+	if (buf[0] == '\0') {
+		return NULL;
+	}
+
+	return strdup(buf);
 }
 
 /* HASH MAP IMPL */

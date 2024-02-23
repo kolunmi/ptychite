@@ -54,8 +54,8 @@ enum ptychite_panel_module_type {
 struct ptychite_panel_module {
 	enum ptychite_panel_module_type type;
 	struct {
-		char **cmd_args;
-		int cmd_args_l;
+		char *cmd;
+		char *cmd_output;
 		int interval;
 		struct ptychite_action *action;
 	} user;

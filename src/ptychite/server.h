@@ -86,6 +86,7 @@ struct ptychite_server {
 	/* struct wl_listener idle_inhibitor_create; */
 
 	struct wl_event_source *time_tick;
+	size_t seconds;
 
 	char panel_date[128];
 	struct ptychite_control *control;

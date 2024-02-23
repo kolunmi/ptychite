@@ -218,15 +218,11 @@ static int server_time_tick_update(void *data) {
 	struct tm *info = localtime(&t);
 
 	if (info) {
+		bool redraw_panel = false;
+
 		if (!*server->panel_date || !info->tm_sec) {
 			strftime(server->panel_date, sizeof(server->panel_date), "%b %-d %-H:%M", info);
-			struct ptychite_monitor *monitor;
-			wl_list_for_each(monitor, &server->monitors, link) {
-				if (!monitor->panel || !monitor->panel->base.element.scene_tree->node.enabled) {
-					continue;
-				}
-				ptychite_window_relay_draw_same_size(&monitor->panel->base);
-			}
+			redraw_panel = true;
 		}
 
 		if (!server->control_greeting || !info->tm_sec) {
@@ -243,8 +239,41 @@ static int server_time_tick_update(void *data) {
 				ptychite_control_draw_auto(server->control);
 			}
 		}
+
+		struct ptychite_panel_section *sections[] = {
+				&server->compositor->config->panel.sections.left,
+				&server->compositor->config->panel.sections.center,
+				&server->compositor->config->panel.sections.right,
+		};
+		size_t i;
+		for (i = 0; i < LENGTH(sections); i++) {
+			int j;
+			for (j = 0; j < sections[i]->modules_l; j++) {
+				if (sections[i]->modules[j].type != PTYCHITE_PANEL_MODULE_USER) {
+					continue;
+				}
+				if (sections[i]->modules[j].user.interval > 0 &&
+						server->seconds % sections[i]->modules[j].user.interval == 0) {
+					free(sections[i]->modules[j].user.cmd_output);
+					sections[i]->modules[j].user.cmd_output =
+							ptychite_get_command_output(sections[i]->modules[j].user.cmd);
+					redraw_panel = true;
+				}
+			}
+		}
+
+		if (redraw_panel) {
+			struct ptychite_monitor *monitor;
+			wl_list_for_each(monitor, &server->monitors, link) {
+				if (!monitor->panel || !monitor->panel->base.element.scene_tree->node.enabled) {
+					continue;
+				}
+				ptychite_window_relay_draw_same_size(&monitor->panel->base);
+			}
+		}
 	}
 
+	server->seconds++;
 	wl_event_source_timer_update(server->time_tick, 1000);
 
 	return 0;
@@ -929,6 +958,7 @@ int ptychite_server_init_and_run(struct ptychite_server *server, struct ptychite
 				  wl_display_get_event_loop(server->display), server_time_tick_update, server))) {
 		return -1;
 	}
+	server->seconds = 0;
 	server_time_tick_update(server);
 
 	if (!ptychite_dbus_init(server)) {

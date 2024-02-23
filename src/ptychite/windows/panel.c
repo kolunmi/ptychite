@@ -330,8 +330,16 @@ static int get_section_width(cairo_t *cairo, struct ptychite_panel *panel, struc
 			}
 			break;
 		}
-		default:
+		case PTYCHITE_PANEL_MODULE_USER: {
+			if (section->modules[i].user.cmd_output) {
+				int width;
+				if (!ptychite_cairo_get_text_size(
+							cairo, font->font, section->modules[i].user.cmd_output, scale, false, &width, NULL)) {
+					x += width;
+				}
+			}
 			break;
+		}
 		}
 		x += font_height / 2;
 	}
@@ -510,8 +518,17 @@ static void draw_section(cairo_t *cairo, struct ptychite_panel *panel, struct pt
 			}
 			break;
 		}
-		default:
+		case PTYCHITE_PANEL_MODULE_USER: {
+			if (section->modules[i].user.cmd_output) {
+				cairo_move_to(cairo, x, y);
+				int width;
+				if (!ptychite_cairo_draw_text(cairo, font->font, section->modules[i].user.cmd_output, foreground, NULL,
+							scale, false, &width, NULL)) {
+					x += width;
+				}
+			}
 			break;
+		}
 		}
 		x += font_height / 2;
 	}

@@ -14,6 +14,7 @@
 #include "json.h"
 #include "macros.h"
 #include "server.h"
+#include "util.h"
 
 typedef int (*ptychite_property_set_func_t)(
 		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error);
@@ -491,13 +492,8 @@ static struct json_object *config_get_panel_font(struct ptychite_config *config)
 static void deinit_panel_section(struct ptychite_panel_section *section) {
 	int i;
 	for (i = 0; i < section->modules_l; i++) {
-		if (section->modules[i].user.cmd_args) {
-			int j;
-			for (j = 0; j < section->modules[i].user.cmd_args_l; j++) {
-				free(section->modules[i].user.cmd_args[j]);
-			}
-			free(section->modules[i].user.cmd_args);
-		}
+		free(section->modules[i].user.cmd);
+		free(section->modules[i].user.cmd_output);
 		if (section->modules[i].user.action) {
 			ptychite_action_destroy(section->modules[i].user.action);
 		}
@@ -583,38 +579,18 @@ static int config_set_panel_section_helper(struct ptychite_panel_section *sectio
 			continue;
 		}
 
-		struct json_object *cmd_args = json_object_get_and_ensure_type(module, "cmd_args", json_type_array);
-		if (!cmd_args) {
+		struct json_object *cmd = json_object_get_and_ensure_type(module, "command", json_type_string);
+		if (!cmd) {
 			deinit_panel_section(&new_section);
-			*error = "panel modules with type user must have a member \"cmd_args\" of type array";
+			*error = "panel modules with type user must have a member \"cmd\" of type string";
 			return -1;
 		}
-		int cmd_args_l = json_object_array_length(cmd_args);
-		if (!cmd_args_l) {
-			deinit_panel_section(&new_section);
-			*error = "panel module user command must have at least one argument";
-			return -1;
-		}
-		new_section.modules[i].user.cmd_args_l = cmd_args_l;
-		if (!(new_section.modules[i].user.cmd_args = calloc(cmd_args_l, sizeof(char *)))) {
+		if (!(new_section.modules[i].user.cmd = strdup(json_object_get_string(cmd)))) {
 			deinit_panel_section(&new_section);
 			*error = "memory error";
 			return -1;
 		}
-		size_t j;
-		struct json_object *arg;
-		JSON_ARRAY_FOREACH(cmd_args, j, arg) {
-			if (!json_object_is_type(arg, json_type_string)) {
-				deinit_panel_section(&new_section);
-				*error = "each command argument must be a string";
-				return -1;
-			}
-			if (!(new_section.modules[i].user.cmd_args[j] = strdup(json_object_get_string(arg)))) {
-				deinit_panel_section(&new_section);
-				*error = "memory error";
-				return -1;
-			}
-		}
+		new_section.modules[i].user.cmd_output = ptychite_get_command_output(new_section.modules[i].user.cmd);
 
 		struct json_object *interval = json_object_get_and_ensure_type(module, "interval", json_type_int);
 		if (!interval) {
@@ -710,7 +686,7 @@ static struct json_object *config_get_panel_section_helper(struct ptychite_panel
 		}
 
 		struct json_object *type = json_object_new_string(type_string);
-		if (!type_string) {
+		if (!type) {
 			json_object_put(array);
 			return NULL;
 		}
@@ -720,21 +696,12 @@ static struct json_object *config_get_panel_section_helper(struct ptychite_panel
 			continue;
 		}
 
-		struct json_object *cmd_args = json_object_new_array_ext(section->modules[i].user.cmd_args_l);
-		if (!cmd_args) {
+		struct json_object *cmd = json_object_new_string(section->modules[i].user.cmd);
+		if (!type_string) {
 			json_object_put(array);
 			return NULL;
 		}
-		json_object_object_add(module, "cmd_args", cmd_args);
-		int j;
-		for (j = 0; j < section->modules[i].user.cmd_args_l; j++) {
-			struct json_object *argument = json_object_new_string(section->modules[i].user.cmd_args[j]);
-			if (!argument) {
-				json_object_put(array);
-				return NULL;
-			}
-			json_object_array_put_idx(cmd_args, j, argument);
-		}
+		json_object_object_add(module, "command", cmd);
 
 		struct json_object *interval = json_object_new_int(section->modules[i].user.interval);
 		if (!interval) {
@@ -1586,10 +1553,10 @@ void ptychite_config_deinit(struct ptychite_config *config) {
 	ptychite_config_wipe_chord_bindings(config);
 	wl_array_release(&config->keyboard.chords);
 	pango_font_description_free(config->panel.font.font);
-	free(config->panel.sections.left.modules);
-	free(config->panel.sections.center.modules);
-	free(config->panel.sections.right.modules);
 	free(config->panel.font.string);
+	deinit_panel_section(&config->panel.sections.left);
+	deinit_panel_section(&config->panel.sections.center);
+	deinit_panel_section(&config->panel.sections.right);
 }
 
 struct ptychite_chord_binding *ptychite_config_add_chord_binding(struct ptychite_config *config) {
