@@ -269,6 +269,70 @@ static struct json_object *config_get_keyboard_xkb_options(struct ptychite_confi
 	return json_object_new_string(config->keyboard.xkb.options ? config->keyboard.xkb.options : "");
 }
 
+static struct json_object *action_to_json(struct ptychite_action *action) {
+	char **args;
+	int args_l;
+	if (ptychite_action_get_args(action, &args, &args_l)) {
+		return NULL;
+	}
+
+	struct json_object *array = json_object_new_array_ext(args_l);
+	if (!action) {
+		int i;
+		for (i = 0; i < args_l; i++) {
+			free(args[i]);
+		}
+		free(args);
+		return NULL;
+	}
+
+	int i;
+	for (i = 0; i < args_l; i++) {
+		struct json_object *argument = json_object_new_string(args[i]);
+		free(args[i]);
+		if (!argument) {
+			int j;
+			for (j = i + 1; j < args_l; j++) {
+				free(args[j]);
+			}
+			free(args);
+			json_object_put(array);
+			return NULL;
+		}
+		json_object_array_put_idx(array, i, argument);
+	}
+	free(args);
+
+	return array;
+}
+
+static int get_json_action_args(struct json_object *action, const char ***args_out, size_t *args_l_out, char **error) {
+	size_t args_l = json_object_array_length(action);
+	if (!args_l) {
+		*error = "an action must have at least one argument";
+		return -1;
+	}
+	const char **args = malloc(sizeof(char *) * args_l);
+	if (!args) {
+		*error = "memory error";
+		return -1;
+	}
+	size_t j;
+	struct json_object *arg;
+	JSON_ARRAY_FOREACH(action, j, arg) {
+		if (!json_object_is_type(arg, json_type_string)) {
+			*error = "all action arguments must be of type string";
+			free(args);
+			return -1;
+		}
+		args[j] = json_object_get_string(arg);
+	}
+
+	*args_out = args;
+	*args_l_out = args_l;
+	return 0;
+}
+
 static int config_set_keyboard_chords(
 		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
 	if (mode == PTYCHITE_PROPERTY_SET_OVERWRITE) {
@@ -306,26 +370,11 @@ static int config_set_keyboard_chords(
 					 "array";
 			return -1;
 		}
-		size_t args_l = json_object_array_length(action);
-		if (!args_l) {
-			*error = "each keyboard chord binding object must have at least one action argument";
+
+		const char **args;
+		size_t args_l;
+		if (get_json_action_args(action, &args, &args_l, error)) {
 			return -1;
-		}
-		const char **args = malloc(sizeof(char *) * args_l);
-		if (!args) {
-			*error = "memory error";
-			return -1;
-		}
-		size_t j;
-		struct json_object *arg;
-		JSON_ARRAY_FOREACH(action, j, arg) {
-			if (!json_object_is_type(arg, json_type_string)) {
-				*error = "each keyboard chord binding object requires all action arguments to be "
-						 "of type string";
-				free(args);
-				return -1;
-			}
-			args[j] = json_object_get_string(arg);
 		}
 
 		struct ptychite_chord_binding *chord_binding =
@@ -382,39 +431,12 @@ static struct json_object *config_get_keyboard_chords(struct ptychite_config *co
 		}
 		json_object_object_add(binding, "pattern", pattern);
 
-		char **args;
-		int args_l;
-		if (ptychite_action_get_args(chord_binding->action, &args, &args_l)) {
-			json_object_put(array);
-			return NULL;
-		}
-		struct json_object *action = json_object_new_array_ext(args_l);
+		struct json_object *action = action_to_json(chord_binding->action);
 		if (!action) {
-			int i;
-			for (i = 0; i < args_l; i++) {
-				free(args[i]);
-			}
-			free(args);
 			json_object_put(array);
 			return NULL;
 		}
 		json_object_object_add(binding, "action", action);
-		int i;
-		for (i = 0; i < args_l; i++) {
-			struct json_object *argument = json_object_new_string(args[i]);
-			free(args[i]);
-			if (!argument) {
-				int j;
-				for (j = i + 1; j < args_l; j++) {
-					free(args[j]);
-				}
-				free(args);
-				json_object_put(array);
-				return NULL;
-			}
-			json_object_array_put_idx(action, i, argument);
-		}
-		free(args);
 
 		idx++;
 	}
@@ -464,6 +486,299 @@ static int config_set_panel_font(
 
 static struct json_object *config_get_panel_font(struct ptychite_config *config) {
 	return json_object_new_string(config->panel.font.string);
+}
+
+static void deinit_panel_section(struct ptychite_panel_section *section) {
+	int i;
+	for (i = 0; i < section->modules_l; i++) {
+		if (section->modules[i].user.cmd_args) {
+			int j;
+			for (j = 0; j < section->modules[i].user.cmd_args_l; j++) {
+				free(section->modules[i].user.cmd_args[j]);
+			}
+			free(section->modules[i].user.cmd_args);
+		}
+		if (section->modules[i].user.action) {
+			ptychite_action_destroy(section->modules[i].user.action);
+		}
+	}
+	free(section->modules);
+}
+
+static int config_set_panel_section_helper(struct ptychite_panel_section *section, struct ptychite_config *config,
+		struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
+	if (!json_object_is_type(value, json_type_array)) {
+		*error = "panel modules must be an array";
+		return -1;
+	}
+
+	int new_modules_l = json_object_array_length(value);
+	if (!new_modules_l) {
+		free(section->modules);
+		section->modules = NULL;
+		section->modules_l = 0;
+		return 0;
+	}
+
+	struct ptychite_panel_section new_section;
+	new_section.modules = calloc(new_modules_l, sizeof(struct ptychite_panel_module));
+	if (!new_section.modules) {
+		*error = "memory error";
+		return -1;
+	}
+	new_section.modules_l = new_modules_l;
+
+	size_t i;
+	struct json_object *module;
+	JSON_ARRAY_FOREACH(value, i, module) {
+		if (!json_object_is_type(module, json_type_object)) {
+			deinit_panel_section(&new_section);
+			*error = "each panel module must be an object";
+			return -1;
+		}
+		int len = json_object_object_length(module);
+		if (len != 1 && len != 4) {
+			deinit_panel_section(&new_section);
+			*error = "each panel module must have one or four members";
+			return -1;
+		}
+
+		struct json_object *type = json_object_get_and_ensure_type(module, "type", json_type_string);
+		if (!type) {
+			deinit_panel_section(&new_section);
+			*error = "each panel module must have a member \"type\" of type string";
+			return -1;
+		}
+		const char *type_string = json_object_get_string(type);
+
+		/* FIXME probably use a table instead */
+		if (!strcmp(type_string, "logo")) {
+			new_section.modules[i].type = PTYCHITE_PANEL_MODULE_LOGO;
+		} else if (!strcmp(type_string, "window_icon")) {
+			new_section.modules[i].type = PTYCHITE_PANEL_MODULE_WINDOWICON;
+		} else if (!strcmp(type_string, "workspaces")) {
+			new_section.modules[i].type = PTYCHITE_PANEL_MODULE_WORKSPACES;
+		} else if (!strcmp(type_string, "date")) {
+			new_section.modules[i].type = PTYCHITE_PANEL_MODULE_DATE;
+		} else if (!strcmp(type_string, "chord")) {
+			new_section.modules[i].type = PTYCHITE_PANEL_MODULE_CHORD;
+		} else if (!strcmp(type_string, "battery")) {
+			new_section.modules[i].type = PTYCHITE_PANEL_MODULE_BATTERY;
+		} else if (!strcmp(type_string, "network")) {
+			new_section.modules[i].type = PTYCHITE_PANEL_MODULE_NETWORK;
+		} else if (!strcmp(type_string, "user")) {
+			new_section.modules[i].type = PTYCHITE_PANEL_MODULE_USER;
+		} else {
+			deinit_panel_section(&new_section);
+			*error = "panel module had an invalid type";
+			return -1;
+		}
+
+		if (new_section.modules[i].type != PTYCHITE_PANEL_MODULE_USER) {
+			if (len != 1) {
+				deinit_panel_section(&new_section);
+				*error = "panel module had too many members for its type";
+				return -1;
+			}
+			continue;
+		}
+
+		struct json_object *cmd_args = json_object_get_and_ensure_type(module, "cmd_args", json_type_array);
+		if (!cmd_args) {
+			deinit_panel_section(&new_section);
+			*error = "panel modules with type user must have a member \"cmd_args\" of type array";
+			return -1;
+		}
+		int cmd_args_l = json_object_array_length(cmd_args);
+		if (!cmd_args_l) {
+			deinit_panel_section(&new_section);
+			*error = "panel module user command must have at least one argument";
+			return -1;
+		}
+		new_section.modules[i].user.cmd_args_l = cmd_args_l;
+		if (!(new_section.modules[i].user.cmd_args = calloc(cmd_args_l, sizeof(char *)))) {
+			deinit_panel_section(&new_section);
+			*error = "memory error";
+			return -1;
+		}
+		size_t j;
+		struct json_object *arg;
+		JSON_ARRAY_FOREACH(cmd_args, j, arg) {
+			if (!json_object_is_type(arg, json_type_string)) {
+				deinit_panel_section(&new_section);
+				*error = "each command argument must be a string";
+				return -1;
+			}
+			if (!(new_section.modules[i].user.cmd_args[j] = strdup(json_object_get_string(arg)))) {
+				deinit_panel_section(&new_section);
+				*error = "memory error";
+				return -1;
+			}
+		}
+
+		struct json_object *interval = json_object_get_and_ensure_type(module, "interval", json_type_int);
+		if (!interval) {
+			deinit_panel_section(&new_section);
+			*error = "panel modules with type user must have a member \"interval\" of type int";
+			return -1;
+		}
+		int interval_val = json_object_get_int(interval);
+		if (interval_val < 0) {
+			deinit_panel_section(&new_section);
+			*error = "user defined panel module must have an interval greater than or equal to zero";
+			return -1;
+		}
+		new_section.modules[i].user.interval = interval_val;
+
+		struct json_object *action = json_object_get_and_ensure_type(module, "action", json_type_array);
+		if (!action) {
+			deinit_panel_section(&new_section);
+			*error = "panel modules with type user must have a member \"action\" of type array";
+			return -1;
+		}
+		const char **args;
+		size_t args_l;
+		if (get_json_action_args(action, &args, &args_l, error)) {
+			deinit_panel_section(&new_section);
+			return -1;
+		}
+		new_section.modules[i].user.action = ptychite_action_create(args, args_l, error);
+		free(args);
+		if (!new_section.modules[i].user.action) {
+			deinit_panel_section(&new_section);
+			return -1;
+		}
+	}
+
+	deinit_panel_section(section);
+	*section = new_section;
+
+	if (config->compositor) {
+		ptychite_server_configure_panels(config->compositor->server);
+	}
+
+	return 0;
+}
+
+static struct json_object *config_get_panel_section_helper(struct ptychite_panel_section *section) {
+	struct json_object *array = json_object_new_array_ext(section->modules_l);
+	if (!array) {
+		return NULL;
+	}
+	if (!section->modules_l) {
+		return array;
+	}
+
+	int i;
+	for (i = 0; i < section->modules_l; i++) {
+		struct json_object *module = json_object_new_object();
+		if (!module) {
+			json_object_put(array);
+			return NULL;
+		}
+		json_object_array_put_idx(array, i, module);
+
+		const char *type_string;
+		switch (section->modules[i].type) {
+		case PTYCHITE_PANEL_MODULE_LOGO:
+			type_string = "logo";
+			break;
+		case PTYCHITE_PANEL_MODULE_WINDOWICON:
+			type_string = "window_icon";
+			break;
+		case PTYCHITE_PANEL_MODULE_WORKSPACES:
+			type_string = "workspaces";
+			break;
+		case PTYCHITE_PANEL_MODULE_DATE:
+			type_string = "date";
+			break;
+		case PTYCHITE_PANEL_MODULE_CHORD:
+			type_string = "chord";
+			break;
+		case PTYCHITE_PANEL_MODULE_BATTERY:
+			type_string = "battery";
+			break;
+		case PTYCHITE_PANEL_MODULE_NETWORK:
+			type_string = "network";
+			break;
+		case PTYCHITE_PANEL_MODULE_USER:
+			type_string = "user";
+			break;
+		default:
+			json_object_put(array);
+			return NULL;
+		}
+
+		struct json_object *type = json_object_new_string(type_string);
+		if (!type_string) {
+			json_object_put(array);
+			return NULL;
+		}
+		json_object_object_add(module, "type", type);
+
+		if (section->modules[i].type != PTYCHITE_PANEL_MODULE_USER) {
+			continue;
+		}
+
+		struct json_object *cmd_args = json_object_new_array_ext(section->modules[i].user.cmd_args_l);
+		if (!cmd_args) {
+			json_object_put(array);
+			return NULL;
+		}
+		json_object_object_add(module, "cmd_args", cmd_args);
+		int j;
+		for (j = 0; j < section->modules[i].user.cmd_args_l; j++) {
+			struct json_object *argument = json_object_new_string(section->modules[i].user.cmd_args[j]);
+			if (!argument) {
+				json_object_put(array);
+				return NULL;
+			}
+			json_object_array_put_idx(cmd_args, j, argument);
+		}
+
+		struct json_object *interval = json_object_new_int(section->modules[i].user.interval);
+		if (!interval) {
+			json_object_put(array);
+			return NULL;
+		}
+		json_object_object_add(module, "interval", interval);
+
+		struct json_object *action = action_to_json(section->modules[i].user.action);
+		if (!action) {
+			json_object_put(array);
+			return NULL;
+		}
+		json_object_object_add(module, "action", action);
+	}
+
+	return array;
+}
+
+static int config_set_panel_modules_left(
+		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
+	return config_set_panel_section_helper(&config->panel.sections.left, config, value, mode, error);
+}
+
+static struct json_object *config_get_panel_modules_left(struct ptychite_config *config) {
+	return config_get_panel_section_helper(&config->panel.sections.left);
+}
+
+static int config_set_panel_modules_center(
+		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
+	return config_set_panel_section_helper(&config->panel.sections.center, config, value, mode, error);
+}
+
+static struct json_object *config_get_panel_modules_center(struct ptychite_config *config) {
+	return config_get_panel_section_helper(&config->panel.sections.center);
+}
+
+static int config_set_panel_modules_right(
+		struct ptychite_config *config, struct json_object *value, enum ptychite_property_set_mode mode, char **error) {
+	return config_set_panel_section_helper(&config->panel.sections.right, config, value, mode, error);
+}
+
+static struct json_object *config_get_panel_modules_right(struct ptychite_config *config) {
+	return config_get_panel_section_helper(&config->panel.sections.right);
 }
 
 static int config_set_color_helper(struct ptychite_config *config, struct json_object *value,
@@ -889,6 +1204,10 @@ struct property_entry config_property_table[] = {
 
 		{(char *[]){"panel", "enabled", NULL}, config_set_panel_enabled, config_get_panel_enabled},
 		{(char *[]){"panel", "font", NULL}, config_set_panel_font, config_get_panel_font},
+		{(char *[]){"panel", "modules", "left", NULL}, config_set_panel_modules_left, config_get_panel_modules_left},
+		{(char *[]){"panel", "modules", "center", NULL}, config_set_panel_modules_center,
+				config_get_panel_modules_center},
+		{(char *[]){"panel", "modules", "right", NULL}, config_set_panel_modules_right, config_get_panel_modules_right},
 		{(char *[]){"panel", "colors", "foreground", NULL}, config_set_panel_colors_foreground,
 				config_get_panel_colors_foreground},
 		{(char *[]){"panel", "colors", "background", NULL}, config_set_panel_colors_background,
