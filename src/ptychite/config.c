@@ -582,7 +582,7 @@ static int config_set_panel_section_helper(struct ptychite_panel_section *sectio
 		struct json_object *cmd = json_object_get_and_ensure_type(module, "command", json_type_string);
 		if (!cmd) {
 			deinit_panel_section(&new_section);
-			*error = "panel modules with type user must have a member \"cmd\" of type string";
+			*error = "panel modules with type user must have a member \"command\" of type string";
 			return -1;
 		}
 		if (!(new_section.modules[i].user.cmd = strdup(json_object_get_string(cmd)))) {
