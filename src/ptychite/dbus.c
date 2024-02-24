@@ -26,6 +26,9 @@ int ptychite_dbus_init(struct ptychite_server *server) {
 	server->ptychite_slot = NULL;
 	server->system_bus = NULL;
 
+	wl_list_init(&server->notifications);
+	wl_list_init(&server->history);
+
 	ret = sd_bus_open_user(&server->bus);
 	if (ret < 0) {
 		fprintf(stderr, "Failed to connect to the user bus: %s\n", strerror(-ret));
@@ -71,8 +74,6 @@ int ptychite_dbus_init(struct ptychite_server *server) {
 	}
 
 	server->dbus_active = true;
-	wl_list_init(&server->notifications);
-	wl_list_init(&server->history);
 
 	struct wl_event_loop *loop = wl_display_get_event_loop(server->display);
 	wl_event_loop_add_fd(loop, sd_bus_get_fd(server->bus), WL_EVENT_READABLE, handle_dbus, server->bus);
