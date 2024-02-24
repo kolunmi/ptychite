@@ -309,19 +309,19 @@ static int get_section_width(cairo_t *cairo, struct ptychite_panel *panel, struc
 			break;
 		}
 		case PTYCHITE_PANEL_MODULE_NETWORK: {
-			if (server->dbus_active) {
+			if (server->dbus.active) {
 				int width;
-				if (!ptychite_cairo_get_text_size(
-							cairo, font->font, server->internet ? "Net Up" : "Net Down", scale, false, &width, NULL)) {
+				if (!ptychite_cairo_get_text_size(cairo, font->font, server->dbus.internet ? "Net Up" : "Net Down",
+							scale, false, &width, NULL)) {
 					x += width;
 				}
 			}
 			break;
 		}
 		case PTYCHITE_PANEL_MODULE_BATTERY: {
-			if (server->dbus_active && server->battery.enabled) {
+			if (server->dbus.active && server->dbus.battery.enabled) {
 				char buf[32];
-				snprintf(buf, sizeof(buf), "BAT %d%%", (int)server->battery.percent);
+				snprintf(buf, sizeof(buf), "BAT %d%%", (int)server->dbus.battery.percent);
 
 				int width;
 				if (!ptychite_cairo_get_text_size(cairo, font->font, buf, scale, false, &width, NULL)) {
@@ -495,20 +495,20 @@ static void draw_section(cairo_t *cairo, struct ptychite_panel *panel, struct pt
 			break;
 		}
 		case PTYCHITE_PANEL_MODULE_NETWORK: {
-			if (server->dbus_active) {
+			if (server->dbus.active) {
 				cairo_move_to(cairo, x, y);
 				int width;
-				if (!ptychite_cairo_draw_text(cairo, font->font, server->internet ? "Net Up" : "Net Down", foreground,
-							NULL, scale, false, &width, NULL)) {
+				if (!ptychite_cairo_draw_text(cairo, font->font, server->dbus.internet ? "Net Up" : "Net Down",
+							foreground, NULL, scale, false, &width, NULL)) {
 					x += width;
 				}
 			}
 			break;
 		}
 		case PTYCHITE_PANEL_MODULE_BATTERY: {
-			if (server->battery.enabled) {
+			if (server->dbus.battery.enabled) {
 				char buf[32];
-				snprintf(buf, sizeof(buf), "BAT %d%%", (int)server->battery.percent);
+				snprintf(buf, sizeof(buf), "BAT %d%%", (int)server->dbus.battery.percent);
 
 				cairo_move_to(cairo, x, y);
 				int width;

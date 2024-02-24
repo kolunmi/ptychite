@@ -92,27 +92,41 @@ struct ptychite_server {
 	struct ptychite_control *control;
 	const char *control_greeting;
 
-	bool dbus_active;
-	sd_bus *bus;
-	sd_bus_slot *ptychite_slot;
-	sd_bus_slot *xdg_slot;
-
-	sd_bus *system_bus;
-	bool internet;
 	struct {
-		bool enabled;
-		double percent;
-	} battery;
+		bool active;
+		sd_bus *user_bus;
+		sd_bus_slot *ptychite_slot;
+		sd_bus_slot *xdg_slot;
 
-	uint32_t last_id;
-	struct wl_list notifications;
-	struct wl_list history;
+		sd_bus *system_bus;
+		bool internet;
+		struct {
+			bool enabled;
+			double percent;
+		} battery;
+	} dbus;
+
+	struct {
+		uint32_t last_id;
+		struct wl_list active;
+		struct wl_list history;
+	} notifications;
 
 	struct ptychite_hash_map applications;
 	struct ptychite_hash_map icons;
 
 	struct ptychite_switcher switcher;
 };
+
+struct ptychite_server *ptychite_server_create(void);
+int ptychite_server_init_and_run(struct ptychite_server *server, struct ptychite_compositor *compositor);
+void ptychite_server_configure_keyboards(struct ptychite_server *server);
+void ptychite_server_configure_panels(struct ptychite_server *server);
+void ptychite_server_configure_views(struct ptychite_server *server);
+void ptychite_server_refresh_wallpapers(struct ptychite_server *server);
+void ptychite_server_retile(struct ptychite_server *server);
+void ptychite_server_check_cursor(struct ptychite_server *server);
+void ptychite_server_execute_action(struct ptychite_server *server, struct ptychite_action *action);
 
 struct ptychite_view *ptychite_server_get_top_view(struct ptychite_server *server);
 struct ptychite_view *ptychite_server_get_front_view(struct ptychite_server *server);
@@ -121,23 +135,5 @@ struct ptychite_view *ptychite_server_get_focused_view(struct ptychite_server *s
 void ptychite_server_tiling_change_views_in_master(struct ptychite_server *server, int delta);
 void ptychite_server_tiling_change_master_factor(struct ptychite_server *server, double delta);
 void ptychite_server_focus_any(struct ptychite_server *server);
-
-struct ptychite_server *ptychite_server_create(void);
-
-int ptychite_server_init_and_run(struct ptychite_server *server, struct ptychite_compositor *compositor);
-
-void ptychite_server_configure_keyboards(struct ptychite_server *server);
-
-void ptychite_server_configure_panels(struct ptychite_server *server);
-
-void ptychite_server_configure_views(struct ptychite_server *server);
-
-void ptychite_server_refresh_wallpapers(struct ptychite_server *server);
-
-void ptychite_server_retile(struct ptychite_server *server);
-
-void ptychite_server_check_cursor(struct ptychite_server *server);
-
-void ptychite_server_execute_action(struct ptychite_server *server, struct ptychite_action *action);
 
 #endif

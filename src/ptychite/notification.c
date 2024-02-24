@@ -68,8 +68,8 @@ struct ptychite_notification *ptychite_notification_create(struct ptychite_serve
 	wlr_scene_node_set_enabled(&notif->base.element.scene_tree->node, false);
 
 	notif->server = server;
-	server->last_id++;
-	notif->id = server->last_id;
+	server->notifications.last_id++;
+	notif->id = server->notifications.last_id;
 	wl_list_init(&notif->actions);
 	wl_list_init(&notif->link);
 	ptychite_notification_reset(notif);
@@ -112,9 +112,9 @@ void ptychite_notification_close(
 	wlr_scene_node_set_enabled(&notif->base.element.scene_tree->node, false);
 
 	if (add_to_history) {
-		wl_list_insert(&notif->server->history, &notif->link);
-		while (wl_list_length(&notif->server->history) > 5) {
-			struct ptychite_notification *n = wl_container_of(notif->server->history.prev, n, link);
+		wl_list_insert(&notif->server->notifications.history, &notif->link);
+		while (wl_list_length(&notif->server->notifications.history) > 5) {
+			struct ptychite_notification *n = wl_container_of(notif->server->notifications.history.prev, n, link);
 			ptychite_notification_destroy(n);
 		}
 	} else {
@@ -124,7 +124,7 @@ void ptychite_notification_close(
 
 struct ptychite_notification *ptychite_server_get_notification(struct ptychite_server *server, uint32_t id) {
 	struct ptychite_notification *notif;
-	wl_list_for_each(notif, &server->notifications, link) {
+	wl_list_for_each(notif, &server->notifications.active, link) {
 		if (notif->id == id) {
 			return notif;
 		}
@@ -135,7 +135,7 @@ struct ptychite_notification *ptychite_server_get_notification(struct ptychite_s
 struct ptychite_notification *get_tagged_notification(
 		struct ptychite_server *server, const char *tag, const char *app_name) {
 	struct ptychite_notification *notif;
-	wl_list_for_each(notif, &server->notifications, link) {
+	wl_list_for_each(notif, &server->notifications.active, link) {
 		if (notif->tag && strlen(notif->tag) != 0 && strcmp(notif->tag, tag) == 0 &&
 				strcmp(notif->app_name, app_name) == 0) {
 			return notif;
@@ -146,7 +146,7 @@ struct ptychite_notification *get_tagged_notification(
 
 void ptychite_server_close_all_notifications(struct ptychite_server *server, enum ptychite_notification_close_reason reason) {
 	struct ptychite_notification *notif, *tmp;
-	wl_list_for_each_safe(notif, tmp, &server->notifications, link) {
+	wl_list_for_each_safe(notif, tmp, &server->notifications.active, link) {
 		ptychite_notification_close(notif, reason, true);
 	}
 }
@@ -300,7 +300,7 @@ size_t format_text(const char *format, char *buf, ptychite_format_func_t format_
 }
 
 void insert_notification(struct ptychite_server *server, struct ptychite_notification *notif) {
-	wl_list_insert(&server->notifications, &notif->link);
+	wl_list_insert(&server->notifications.active, &notif->link);
 
 	int notif_cap;
 	if (server->active_monitor) {
@@ -312,8 +312,8 @@ void insert_notification(struct ptychite_server *server, struct ptychite_notific
 		notif_cap = 10;
 	}
 
-	while (wl_list_length(&server->notifications) > notif_cap) {
-		struct ptychite_notification *n = wl_container_of(server->notifications.prev, n, link);
+	while (wl_list_length(&server->notifications.active) > notif_cap) {
+		struct ptychite_notification *n = wl_container_of(server->notifications.active.prev, n, link);
 		ptychite_notification_close(n, PTYCHITE_NOTIFICATION_CLOSE_EXPIRED, true);
 	}
 }
@@ -328,7 +328,7 @@ void ptychite_server_arrange_notifications(struct ptychite_server *server) {
 	int y = monitor->window_geometry.y + 10;
 
 	struct ptychite_notification *notif;
-	wl_list_for_each(notif, &server->notifications, link) {
+	wl_list_for_each(notif, &server->notifications.active, link) {
 		wlr_scene_node_set_position(&notif->base.element.scene_tree->node, x, y);
 		y += notif->base.element.height + 10;
 	}

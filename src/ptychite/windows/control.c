@@ -62,7 +62,7 @@ static void control_draw(
 		}
 	}
 
-	if (!server->dbus_active || wl_list_empty(&server->history)) {
+	if (!server->dbus.active || wl_list_empty(&server->notifications.history)) {
 		ptychite_cairo_draw_text_center(cairo, content_box.y + (content_box.height - font_height) / 2, content_box.x,
 				content_box.width, NULL, font->font, "No Notifications", gray3, NULL, scale * 1.25, false, NULL, NULL);
 	} else {
@@ -77,7 +77,7 @@ static void control_draw(
 		int x;
 
 		struct ptychite_notification *notif;
-		wl_list_for_each(notif, &server->history, link) {
+		wl_list_for_each(notif, &server->notifications.history, link) {
 			if (y + notif_box.height > surface_height) {
 				notif->control_regions.region = (struct ptychite_mouse_region){0};
 				notif->control_regions.close = (struct ptychite_mouse_region){0};
@@ -153,7 +153,7 @@ static void control_handle_pointer_leave(struct ptychite_window *window) {
 	bool redraw = false;
 
 	struct ptychite_notification *notif;
-	wl_list_for_each(notif, &server->history, link) {
+	wl_list_for_each(notif, &server->notifications.history, link) {
 		redraw |= notif->control_regions.region.entered;
 		notif->control_regions.region.entered = false;
 
@@ -173,7 +173,7 @@ static void control_handle_pointer_move(struct ptychite_window *window, double x
 	bool redraw = false;
 
 	struct ptychite_notification *notif;
-	wl_list_for_each(notif, &server->history, link) {
+	wl_list_for_each(notif, &server->notifications.history, link) {
 		redraw |= ptychite_mouse_region_update_state(&notif->control_regions.region, x, y);
 		redraw |= ptychite_mouse_region_update_state(&notif->control_regions.close, x, y);
 	}
@@ -195,7 +195,7 @@ static void control_handle_pointer_button(
 	bool redraw = false;
 
 	struct ptychite_notification *notif, *tmp;
-	wl_list_for_each_safe(notif, tmp, &server->history, link) {
+	wl_list_for_each_safe(notif, tmp, &server->notifications.history, link) {
 		if (notif->control_regions.region.entered) {
 		}
 		if (notif->control_regions.close.entered) {
@@ -247,7 +247,7 @@ void ptychite_control_draw_auto(struct ptychite_control *control) {
 }
 
 void ptychite_control_show(struct ptychite_control *control) {
-	if (control->base.server->dbus_active) {
+	if (control->base.server->dbus.active) {
 		ptychite_server_close_all_notifications(control->base.server, PTYCHITE_NOTIFICATION_CLOSE_EXPIRED);
 	}
 

@@ -41,8 +41,8 @@ static int handle_nm(sd_bus_message *msg, void *userdata, sd_bus_error *ret_erro
 				return ret;
 			}
 			bool connected = state == 70;
-			redraw_panel = server->internet != connected;
-			server->internet = connected;
+			redraw_panel = server->dbus.internet != connected;
+			server->dbus.internet = connected;
 		} else {
 			ret = sd_bus_message_skip(msg, "v");
 			if (ret < 0) {
@@ -79,7 +79,7 @@ static int handle_nm(sd_bus_message *msg, void *userdata, sd_bus_error *ret_erro
 
 int ptychite_dbus_init_nm(struct ptychite_server *server) {
 	sd_bus_message *reply;
-	int ret = sd_bus_call_method(server->system_bus, "org.freedesktop.NetworkManager",
+	int ret = sd_bus_call_method(server->dbus.system_bus, "org.freedesktop.NetworkManager",
 			"/org/freedesktop/NetworkManager", "org.freedesktop.NetworkManager", "state", NULL, &reply, NULL);
 	if (ret < 0) {
 		wlr_log(WLR_ERROR, "Failed to call method: %s", strerror(-ret));
@@ -92,10 +92,10 @@ int ptychite_dbus_init_nm(struct ptychite_server *server) {
 		wlr_log(WLR_ERROR, "Failed to parse message: %s", strerror(-ret));
 		return ret;
 	}
-	server->internet = state == 70;
+	server->dbus.internet = state == 70;
 	sd_bus_message_unref(reply);
 
-	return sd_bus_add_match(server->system_bus, NULL,
+	return sd_bus_add_match(server->dbus.system_bus, NULL,
 			"type='signal',"
 			"interface='org.freedesktop.DBus.Properties',"
 			"member='PropertiesChanged',"

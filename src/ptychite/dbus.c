@@ -21,15 +21,15 @@ static int handle_dbus(int fd, uint32_t mask, void *data) {
 
 int ptychite_dbus_init(struct ptychite_server *server) {
 	int ret = 0;
-	server->bus = NULL;
-	server->xdg_slot = NULL;
-	server->ptychite_slot = NULL;
-	server->system_bus = NULL;
+	server->dbus.user_bus = NULL;
+	server->dbus.xdg_slot = NULL;
+	server->dbus.ptychite_slot = NULL;
+	server->dbus.system_bus = NULL;
 
-	wl_list_init(&server->notifications);
-	wl_list_init(&server->history);
+	wl_list_init(&server->notifications.active);
+	wl_list_init(&server->notifications.history);
 
-	ret = sd_bus_open_user(&server->bus);
+	ret = sd_bus_open_user(&server->dbus.user_bus);
 	if (ret < 0) {
 		fprintf(stderr, "Failed to connect to the user bus: %s\n", strerror(-ret));
 		goto err;
@@ -46,7 +46,7 @@ int ptychite_dbus_init(struct ptychite_server *server) {
 		goto err;
 	}
 
-	ret = sd_bus_request_name(server->bus, "org.freedesktop.Notifications", 0);
+	ret = sd_bus_request_name(server->dbus.user_bus, "org.freedesktop.Notifications", 0);
 	if (ret < 0) {
 		fprintf(stderr, "Failed to acquire service name: %s\n", strerror(-ret));
 		if (ret == -EEXIST) {
@@ -55,7 +55,7 @@ int ptychite_dbus_init(struct ptychite_server *server) {
 		goto err;
 	}
 
-	ret = sd_bus_open_system(&server->system_bus);
+	ret = sd_bus_open_system(&server->dbus.system_bus);
 	if (ret < 0) {
 		fprintf(stderr, "Failed to connect to the system bus: %s\n", strerror(-ret));
 		goto err;
@@ -73,23 +73,23 @@ int ptychite_dbus_init(struct ptychite_server *server) {
 		goto err;
 	}
 
-	server->dbus_active = true;
+	server->dbus.active = true;
 
 	struct wl_event_loop *loop = wl_display_get_event_loop(server->display);
-	wl_event_loop_add_fd(loop, sd_bus_get_fd(server->bus), WL_EVENT_READABLE, handle_dbus, server->bus);
-	wl_event_loop_add_fd(loop, sd_bus_get_fd(server->system_bus), WL_EVENT_READABLE, handle_dbus, server->system_bus);
+	wl_event_loop_add_fd(loop, sd_bus_get_fd(server->dbus.user_bus), WL_EVENT_READABLE, handle_dbus, server->dbus.user_bus);
+	wl_event_loop_add_fd(loop, sd_bus_get_fd(server->dbus.system_bus), WL_EVENT_READABLE, handle_dbus, server->dbus.system_bus);
 
 	return 0;
 
 err:
 	ptychite_dbus_finish(server);
-	server->dbus_active = false;
+	server->dbus.active = false;
 	return -1;
 }
 
 void ptychite_dbus_finish(struct ptychite_server *server) {
-	sd_bus_slot_unref(server->xdg_slot);
-	sd_bus_slot_unref(server->ptychite_slot);
-	sd_bus_flush_close_unref(server->bus);
-	sd_bus_flush_close_unref(server->system_bus);
+	sd_bus_slot_unref(server->dbus.xdg_slot);
+	sd_bus_slot_unref(server->dbus.ptychite_slot);
+	sd_bus_flush_close_unref(server->dbus.user_bus);
+	sd_bus_flush_close_unref(server->dbus.system_bus);
 }

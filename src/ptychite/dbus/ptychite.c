@@ -135,5 +135,5 @@ static const sd_bus_vtable service_vtable[] = {SD_BUS_VTABLE_START(0),
 
 int ptychite_dbus_init_ptychite(struct ptychite_server *server) {
 	return sd_bus_add_object_vtable(
-			server->bus, &server->ptychite_slot, service_path, service_interface, service_vtable, server);
+			server->dbus.user_bus, &server->dbus.ptychite_slot, service_path, service_interface, service_vtable, server);
 }

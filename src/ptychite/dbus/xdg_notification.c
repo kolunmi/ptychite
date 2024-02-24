@@ -415,14 +415,15 @@ static const sd_bus_vtable service_vtable[] = {SD_BUS_VTABLE_START(0),
 
 int ptychite_dbus_init_xdg(struct ptychite_server *server) {
 	return sd_bus_add_object_vtable(
-			server->bus, &server->xdg_slot, service_path, service_interface, service_vtable, server);
+			server->dbus.user_bus, &server->dbus.xdg_slot, service_path, service_interface, service_vtable, server);
 }
 
 void ptychite_dbus_notify_notification_closed(
 		struct ptychite_notification *notif, enum ptychite_notification_close_reason reason) {
 	struct ptychite_server *server = notif->server;
 
-	sd_bus_emit_signal(server->bus, service_path, service_interface, "NotificationClosed", "uu", notif->id, reason);
+	sd_bus_emit_signal(
+			server->dbus.user_bus, service_path, service_interface, "NotificationClosed", "uu", notif->id, reason);
 }
 
 void ptychite_dbus_notify_action_invoked(struct ptychite_notification_action *action, const char *activation_token) {
@@ -434,10 +435,10 @@ void ptychite_dbus_notify_action_invoked(struct ptychite_notification_action *ac
 	struct ptychite_server *server = action->notification->server;
 
 	if (activation_token != NULL) {
-		sd_bus_emit_signal(server->bus, service_path, service_interface, "ActivationToken", "us",
+		sd_bus_emit_signal(server->dbus.user_bus, service_path, service_interface, "ActivationToken", "us",
 				action->notification->id, activation_token);
 	}
 
-	sd_bus_emit_signal(
-			server->bus, service_path, service_interface, "ActionInvoked", "us", action->notification->id, action->key);
+	sd_bus_emit_signal(server->dbus.user_bus, service_path, service_interface, "ActionInvoked", "us",
+			action->notification->id, action->key);
 }
