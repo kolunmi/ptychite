@@ -8,63 +8,54 @@
 #include "../notification.h"
 #include "../server.h"
 
-static int handle_nm(sd_bus_message *msg, void *userdata, sd_bus_error *ret_error) {
-	struct ptychite_server *server = userdata;
-	bool redraw_panel = false;
+struct nm_handle_property_data {
+	struct ptychite_server *server;
+	bool redraw_panel;
+};
+
+static int handle_property(const char *property, sd_bus_message *msg, void *data) {
+	struct nm_handle_property_data *state = data;
 	int ret;
 
-	ret = sd_bus_message_skip(msg, "s");
+	if (!strcmp(property, "State")) {
+		uint32_t nm_state;
+		ret = sd_bus_message_read(msg, "v", "u", &nm_state);
+		if (ret < 0) {
+			return ret;
+		}
+		bool connected = nm_state == 70;
+		state->redraw_panel = state->server->dbus.internet != connected;
+		state->server->dbus.internet = connected;
+	} else {
+		ret = sd_bus_message_skip(msg, "v");
+		if (ret < 0) {
+			return ret;
+		}
+	}
+
+	return 0;
+}
+
+static int handle_nm(sd_bus_message *msg, void *userdata, sd_bus_error *ret_error) {
+	struct ptychite_server *server = userdata;
+
+	int ret = sd_bus_message_skip(msg, "s");
 	if (ret < 0) {
 		wlr_log(WLR_ERROR, "Error skipping message fields: %s", strerror(-ret));
 		return ret;
 	}
 
-	ret = sd_bus_message_enter_container(msg, SD_BUS_TYPE_ARRAY, "{sv}");
+	struct nm_handle_property_data data = {
+			.server = server,
+			.redraw_panel = false,
+	};
+
+	ret = ptychite_dbus_read_properties_changed_event(msg, handle_property, &data);
 	if (ret < 0) {
-		wlr_log(WLR_ERROR, "Error entering container: %s", strerror(-ret));
 		return ret;
 	}
 
-	while ((ret = sd_bus_message_enter_container(msg, SD_BUS_TYPE_DICT_ENTRY, "sv")) > 0) {
-		char *property;
-		ret = sd_bus_message_read(msg, "s", &property);
-		if (ret < 0) {
-			wlr_log(WLR_ERROR, "Error reading message: %s", strerror(-ret));
-			return ret;
-		}
-
-		if (!strcmp(property, "State")) {
-			uint32_t state;
-			ret = sd_bus_message_read(msg, "v", "u", &state);
-			if (ret < 0) {
-				wlr_log(WLR_ERROR, "Error reading message: %s", strerror(-ret));
-				return ret;
-			}
-			bool connected = state == 70;
-			redraw_panel = server->dbus.internet != connected;
-			server->dbus.internet = connected;
-		} else {
-			ret = sd_bus_message_skip(msg, "v");
-			if (ret < 0) {
-				wlr_log(WLR_ERROR, "Failed to skip: %s", strerror(-ret));
-				return ret;
-			}
-		}
-
-		ret = sd_bus_message_exit_container(msg);
-		if (ret < 0) {
-			wlr_log(WLR_ERROR, "Failed to exit container: %s", strerror(-ret));
-			return ret;
-		}
-	}
-
-	ret = sd_bus_message_exit_container(msg);
-	if (ret < 0) {
-		wlr_log(WLR_ERROR, "Failed to exit container: %s", strerror(-ret));
-		return ret;
-	}
-
-	if (redraw_panel) {
+	if (data.redraw_panel) {
 		struct ptychite_monitor *monitor;
 		wl_list_for_each(monitor, &server->monitors, link) {
 			if (!monitor->panel) {

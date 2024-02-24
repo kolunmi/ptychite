@@ -76,8 +76,10 @@ int ptychite_dbus_init(struct ptychite_server *server) {
 	server->dbus.active = true;
 
 	struct wl_event_loop *loop = wl_display_get_event_loop(server->display);
-	wl_event_loop_add_fd(loop, sd_bus_get_fd(server->dbus.user_bus), WL_EVENT_READABLE, handle_dbus, server->dbus.user_bus);
-	wl_event_loop_add_fd(loop, sd_bus_get_fd(server->dbus.system_bus), WL_EVENT_READABLE, handle_dbus, server->dbus.system_bus);
+	wl_event_loop_add_fd(
+			loop, sd_bus_get_fd(server->dbus.user_bus), WL_EVENT_READABLE, handle_dbus, server->dbus.user_bus);
+	wl_event_loop_add_fd(
+			loop, sd_bus_get_fd(server->dbus.system_bus), WL_EVENT_READABLE, handle_dbus, server->dbus.system_bus);
 
 	return 0;
 
@@ -92,4 +94,41 @@ void ptychite_dbus_finish(struct ptychite_server *server) {
 	sd_bus_slot_unref(server->dbus.ptychite_slot);
 	sd_bus_flush_close_unref(server->dbus.user_bus);
 	sd_bus_flush_close_unref(server->dbus.system_bus);
+}
+
+int ptychite_dbus_read_properties_changed_event(
+		sd_bus_message *msg, ptychite_dbus_properties_changed_func_t handler, void *data) {
+	int ret = sd_bus_message_enter_container(msg, SD_BUS_TYPE_ARRAY, "{sv}");
+	if (ret < 0) {
+		wlr_log(WLR_ERROR, "Error entering container: %s", strerror(-ret));
+		return ret;
+	}
+
+	while ((ret = sd_bus_message_enter_container(msg, SD_BUS_TYPE_DICT_ENTRY, "sv")) > 0) {
+		const char *property;
+		ret = sd_bus_message_read(msg, "s", &property);
+		if (ret < 0) {
+			wlr_log(WLR_ERROR, "Error reading message: %s", strerror(-ret));
+			return ret;
+		}
+
+		ret = handler(property, msg, data);
+		if (ret < 0) {
+			wlr_log(WLR_ERROR, "Failed to handle property change: %s", strerror(-ret));
+		}
+
+		ret = sd_bus_message_exit_container(msg);
+		if (ret < 0) {
+			wlr_log(WLR_ERROR, "Failed to exit container: %s", strerror(-ret));
+			return ret;
+		}
+	}
+
+	ret = sd_bus_message_exit_container(msg);
+	if (ret < 0) {
+		wlr_log(WLR_ERROR, "Failed to exit container: %s", strerror(-ret));
+		return ret;
+	}
+
+	return 0;
 }

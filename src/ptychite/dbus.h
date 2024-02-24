@@ -17,4 +17,7 @@ void ptychite_dbus_notify_action_invoked(struct ptychite_notification_action *ac
 int ptychite_dbus_init_nm(struct ptychite_server *server);
 int ptychite_dbus_init_upower(struct ptychite_server *server);
 
+typedef int (*ptychite_dbus_properties_changed_func_t)(const char *property, sd_bus_message *msg, void *data);
+int ptychite_dbus_read_properties_changed_event(sd_bus_message *msg, ptychite_dbus_properties_changed_func_t handler, void *data);
+
 #endif
