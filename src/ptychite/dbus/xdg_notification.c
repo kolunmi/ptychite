@@ -406,12 +406,16 @@ static int handle_get_server_information(sd_bus_message *msg, void *data, sd_bus
 	return sd_bus_reply_method_return(msg, "ssss", name, vendor, version, spec_version);
 }
 
-static const sd_bus_vtable service_vtable[] = {SD_BUS_VTABLE_START(0),
+static const sd_bus_vtable service_vtable[] = {
+		SD_BUS_VTABLE_START(0),
 		SD_BUS_METHOD("GetCapabilities", "", "as", handle_get_capabilities, SD_BUS_VTABLE_UNPRIVILEGED),
 		SD_BUS_METHOD("Notify", "susssasa{sv}i", "u", handle_notify, SD_BUS_VTABLE_UNPRIVILEGED),
 		SD_BUS_METHOD("CloseNotification", "u", "", handle_close_notification, SD_BUS_VTABLE_UNPRIVILEGED),
 		SD_BUS_METHOD("GetServerInformation", "", "ssss", handle_get_server_information, SD_BUS_VTABLE_UNPRIVILEGED),
-		SD_BUS_SIGNAL("ActionInvoked", "us", 0), SD_BUS_SIGNAL("NotificationClosed", "uu", 0), SD_BUS_VTABLE_END};
+		SD_BUS_SIGNAL("ActionInvoked", "us", 0),
+		SD_BUS_SIGNAL("NotificationClosed", "uu", 0),
+		SD_BUS_VTABLE_END,
+};
 
 int ptychite_dbus_init_xdg(struct ptychite_server *server) {
 	return sd_bus_add_object_vtable(

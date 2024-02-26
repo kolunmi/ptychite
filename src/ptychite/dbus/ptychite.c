@@ -126,14 +126,17 @@ static int handle_dump_applications(sd_bus_message *msg, void *data, sd_bus_erro
 
 	json_object_put(array);
 	sd_bus_message_unref(reply);
+
 	return 0;
 }
 
-static const sd_bus_vtable service_vtable[] = {SD_BUS_VTABLE_START(0),
+static const sd_bus_vtable service_vtable[] = {
+		SD_BUS_VTABLE_START(0),
 		SD_BUS_METHOD("DumpApplications", "", "s", handle_dump_applications, SD_BUS_VTABLE_UNPRIVILEGED),
-		SD_BUS_VTABLE_END};
+		SD_BUS_VTABLE_END,
+};
 
 int ptychite_dbus_init_ptychite(struct ptychite_server *server) {
-	return sd_bus_add_object_vtable(
-			server->dbus.user_bus, &server->dbus.ptychite_slot, service_path, service_interface, service_vtable, server);
+	return sd_bus_add_object_vtable(server->dbus.user_bus, &server->dbus.ptychite_slot, service_path, service_interface,
+			service_vtable, server);
 }

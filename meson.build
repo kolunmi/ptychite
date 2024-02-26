@@ -142,7 +142,7 @@ executable(
     'src/ptychite/dbus/network_manager.c',
     'src/ptychite/dbus/upower.c',
   ],
-  include_directories: [include_directories('.')],
+  include_directories: [],
   dependencies: [
     server_protos,
     wayland_server,
@@ -164,7 +164,7 @@ executable(
   [
     'src/ptymsg/ptymsg.c',
   ],
-  include_directories: [include_directories('.')],
+  include_directories: [],
   dependencies: [
     client_protos,
     wayland_client,

@@ -96,43 +96,45 @@ int ptychite_dbus_init_upower(struct ptychite_server *server) {
 	int ret = sd_bus_get_property(server->dbus.system_bus, "org.freedesktop.UPower", "/org/freedesktop/UPower",
 			"org.freedesktop.UPower", "OnBattery", NULL, &reply, "b");
 	if (ret < 0) {
-		wlr_log(WLR_ERROR, "Failed to get property: %s", strerror(-ret));
 		return ret;
 	}
 
 	bool on_battery;
 	ret = sd_bus_message_read(reply, "b", &on_battery);
+	sd_bus_message_unref(reply);
 	if (ret < 0) {
-		wlr_log(WLR_ERROR, "Failed to parse message: %s", strerror(-ret));
 		return ret;
 	}
 	server->dbus.battery.enabled = on_battery;
-	sd_bus_message_unref(reply);
 
-	sd_bus_add_match(server->dbus.system_bus, NULL,
+	ret = sd_bus_add_match(server->dbus.system_bus, NULL,
 			"type='signal',"
 			"interface='org.freedesktop.DBus.Properties',"
 			"member='PropertiesChanged',"
 			"path='/org/freedesktop/UPower',"
 			"arg0='org.freedesktop.UPower'",
 			handle_upower, server);
+	if (ret < 0) {
+		return ret;
+	}
 
+	// -----------
+
+	reply = NULL;
 	ret = sd_bus_get_property(server->dbus.system_bus, "org.freedesktop.UPower",
 			"/org/freedesktop/UPower/devices/DisplayDevice", "org.freedesktop.UPower.Device", "Percentage", NULL,
 			&reply, "d");
 	if (ret < 0) {
-		wlr_log(WLR_ERROR, "Failed to get property: %s", strerror(-ret));
 		return ret;
 	}
 
 	double percent;
 	ret = sd_bus_message_read(reply, "d", &percent);
+	sd_bus_message_unref(reply);
 	if (ret < 0) {
-		wlr_log(WLR_ERROR, "Failed to parse message: %s", strerror(-ret));
 		return ret;
 	}
 	server->dbus.battery.percent = percent;
-	sd_bus_message_unref(reply);
 
 	return sd_bus_add_match(server->dbus.system_bus, NULL,
 			"type='signal',"

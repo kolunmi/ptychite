@@ -79,12 +79,12 @@ int ptychite_dbus_init_nm(struct ptychite_server *server) {
 
 	uint32_t state;
 	ret = sd_bus_message_read(reply, "u", &state);
+	sd_bus_message_unref(reply);
 	if (ret < 0) {
 		wlr_log(WLR_ERROR, "Failed to parse message: %s", strerror(-ret));
 		return ret;
 	}
 	server->dbus.internet = state == 70;
-	sd_bus_message_unref(reply);
 
 	return sd_bus_add_match(server->dbus.system_bus, NULL,
 			"type='signal',"
