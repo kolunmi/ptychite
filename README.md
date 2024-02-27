@@ -7,7 +7,7 @@ A flexible, approachable, and powerful wayland compositor. This project is still
 
 Note: ptychite is now developed on [codeberg](https://codeberg.org/kolunmi/ptychite).
 
-![screenshot](screenshot.png "screenshot")
+![screenshot](https://codeberg.org/attachments/24ab0d93-2dfa-4115-82e6-4ac188f76f52 "screenshot")
 
 ## Project Goals
 * performant
