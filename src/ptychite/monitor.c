@@ -152,8 +152,8 @@ void ptychite_monitor_disable(struct ptychite_monitor *monitor) {
 		wl_list_init(&end_workspace->views_order);
 		wl_list_init(&end_workspace->views_focus);
 
-		struct ptychite_workspace *workspace;
-		wl_list_for_each(workspace, &monitor->workspaces, link) {
+		struct ptychite_workspace *workspace, *workspace_tmp;
+		wl_list_for_each_safe(workspace, workspace_tmp, &monitor->workspaces, link) {
 			if (workspace == end_workspace) {
 				break;
 			}
