@@ -1436,9 +1436,44 @@ int ptychite_config_init(struct ptychite_config *config, struct ptychite_composi
 	config->keyboard.xkb.options = NULL;
 	wl_array_init(&config->keyboard.chords);
 
-	config->panel.enabled = true;
+	struct {
+		const char *pattern;
+		const char **action;
+	} default_chords[] = {
+			{"S-Sh-Q", (const char *[]){"terminate", NULL}},
+			{"S-q", (const char *[]){"close", NULL}},
+			{"S-Return", (const char *[]){"spawn", "foot", NULL}},
+			{"S-x S-f", (const char *[]){"spawn", "nautilus", NULL}},
+			{"S-m", (const char *[]){"control", NULL}},
+			{"S-i", (const char *[]){"inc_master", NULL}},
+			{"S-d", (const char *[]){"dec_master", NULL}},
+			{"S-l", (const char *[]){"inc_mfact", NULL}},
+			{"S-h", (const char *[]){"dec_mfact", NULL}},
+			{"S-r", (const char *[]){"toggle_rmaster", NULL}},
+			{"S-n", (const char *[]){"next_workspace", NULL}},
+			{"S-p", (const char *[]){"prev_workspace", NULL}},
+			{"S-w", (const char *[]){"next_view", NULL}},
+			{"S-Sh-w", (const char *[]){"prev_view", NULL}},
+			{"S-s", (const char *[]){"swap_front", NULL}},
+			{"S-Tab", (const char *[]){"switch_app", NULL}},
+			{"S-grave", (const char *[]){"switch_app_instance", NULL}},
+	};
+
+	/* FIXME errors should be const */
 	char *error;
-	if (font_fill_from_string(&config->panel.font, "monospace bold 15", &error)) {
+	size_t i;
+	for (i = 0; i < LENGTH(default_chords); i++) {
+		int action_args_l;
+		for (action_args_l = 0; default_chords[i].action[action_args_l]; action_args_l++) {
+		}
+		if (!ptychite_config_scan_into_chord_binding(
+					config, default_chords[i].pattern, default_chords[i].action, action_args_l, &error)) {
+			goto err;
+		}
+	}
+
+	config->panel.enabled = true;
+	if (font_fill_from_string(&config->panel.font, "monospace bold 12", &error)) {
 		return -1;
 	}
 
