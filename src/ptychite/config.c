@@ -22,13 +22,13 @@ typedef int (*ptychite_property_set_func_t)(
 typedef struct json_object *(*ptychite_property_get_func_t)(struct ptychite_config *config);
 
 struct property_entry {
-	char **path;
-	ptychite_property_set_func_t set_func;
-	ptychite_property_get_func_t get_func;
+	const char **path;
+	const ptychite_property_set_func_t set_func;
+	const ptychite_property_get_func_t get_func;
 };
 
 struct property_entry_reference {
-	struct property_entry *entry;
+	const struct property_entry *entry;
 	size_t path_l;
 };
 
@@ -1160,55 +1160,55 @@ static struct json_object *config_get_tiling_gaps(struct ptychite_config *config
 	return json_object_new_int(config->tiling.gaps);
 }
 
-struct property_entry config_property_table[] = {
-		{(char *[]){"keyboard", "repeat", "rate", NULL}, config_set_keyboard_repeat_rate,
+static const struct property_entry config_property_table[] = {
+		{(const char *[]){"keyboard", "repeat", "rate", NULL}, config_set_keyboard_repeat_rate,
 				config_get_keyboard_repeat_rate},
-		{(char *[]){"keyboard", "repeat", "delay", NULL}, config_set_keyboard_repeat_delay,
+		{(const char *[]){"keyboard", "repeat", "delay", NULL}, config_set_keyboard_repeat_delay,
 				config_get_keyboard_repeat_delay},
-		{(char *[]){"keyboard", "xkb", "options", NULL}, config_set_keyboard_xkb_options,
+		{(const char *[]){"keyboard", "xkb", "options", NULL}, config_set_keyboard_xkb_options,
 				config_get_keyboard_xkb_options},
-		{(char *[]){"keyboard", "chords", NULL}, config_set_keyboard_chords, config_get_keyboard_chords},
+		{(const char *[]){"keyboard", "chords", NULL}, config_set_keyboard_chords, config_get_keyboard_chords},
 
-		{(char *[]){"panel", "enabled", NULL}, config_set_panel_enabled, config_get_panel_enabled},
-		{(char *[]){"panel", "font", NULL}, config_set_panel_font, config_get_panel_font},
-		{(char *[]){"panel", "modules", "left", NULL}, config_set_panel_modules_left, config_get_panel_modules_left},
-		{(char *[]){"panel", "modules", "center", NULL}, config_set_panel_modules_center,
+		{(const char *[]){"panel", "enabled", NULL}, config_set_panel_enabled, config_get_panel_enabled},
+		{(const char *[]){"panel", "font", NULL}, config_set_panel_font, config_get_panel_font},
+		{(const char *[]){"panel", "modules", "left", NULL}, config_set_panel_modules_left, config_get_panel_modules_left},
+		{(const char *[]){"panel", "modules", "center", NULL}, config_set_panel_modules_center,
 				config_get_panel_modules_center},
-		{(char *[]){"panel", "modules", "right", NULL}, config_set_panel_modules_right, config_get_panel_modules_right},
-		{(char *[]){"panel", "colors", "foreground", NULL}, config_set_panel_colors_foreground,
+		{(const char *[]){"panel", "modules", "right", NULL}, config_set_panel_modules_right, config_get_panel_modules_right},
+		{(const char *[]){"panel", "colors", "foreground", NULL}, config_set_panel_colors_foreground,
 				config_get_panel_colors_foreground},
-		{(char *[]){"panel", "colors", "background", NULL}, config_set_panel_colors_background,
+		{(const char *[]){"panel", "colors", "background", NULL}, config_set_panel_colors_background,
 				config_get_panel_colors_background},
-		{(char *[]){"panel", "colors", "accent", NULL}, config_set_panel_colors_accent, config_get_panel_colors_accent},
-		{(char *[]){"panel", "colors", "gray1", NULL}, config_set_panel_colors_gray1, config_get_panel_colors_gray1},
-		{(char *[]){"panel", "colors", "gray2", NULL}, config_set_panel_colors_gray2, config_get_panel_colors_gray2},
-		{(char *[]){"panel", "colors", "gray3", NULL}, config_set_panel_colors_gray3, config_get_panel_colors_gray3},
-		{(char *[]){"panel", "colors", "border", NULL}, config_set_panel_colors_border, config_get_panel_colors_border},
-		{(char *[]){"panel", "colors", "separator", NULL}, config_set_panel_colors_separator,
+		{(const char *[]){"panel", "colors", "accent", NULL}, config_set_panel_colors_accent, config_get_panel_colors_accent},
+		{(const char *[]){"panel", "colors", "gray1", NULL}, config_set_panel_colors_gray1, config_get_panel_colors_gray1},
+		{(const char *[]){"panel", "colors", "gray2", NULL}, config_set_panel_colors_gray2, config_get_panel_colors_gray2},
+		{(const char *[]){"panel", "colors", "gray3", NULL}, config_set_panel_colors_gray3, config_get_panel_colors_gray3},
+		{(const char *[]){"panel", "colors", "border", NULL}, config_set_panel_colors_border, config_get_panel_colors_border},
+		{(const char *[]){"panel", "colors", "separator", NULL}, config_set_panel_colors_separator,
 				config_get_panel_colors_separator},
-		{(char *[]){"panel", "colors", "chord", NULL}, config_set_panel_colors_chord, config_get_panel_colors_chord},
+		{(const char *[]){"panel", "colors", "chord", NULL}, config_set_panel_colors_chord, config_get_panel_colors_chord},
 
-		{(char *[]){"views", "map_to_front", NULL}, config_set_views_map_to_front, config_get_views_map_to_front},
-		{(char *[]){"views", "title_bar", "enabled", NULL}, config_set_views_title_bar_enabled,
+		{(const char *[]){"views", "map_to_front", NULL}, config_set_views_map_to_front, config_get_views_map_to_front},
+		{(const char *[]){"views", "title_bar", "enabled", NULL}, config_set_views_title_bar_enabled,
 				config_get_views_title_bar_enabled},
-		{(char *[]){"views", "title_bar", "colors", "close", NULL}, config_set_views_title_bar_colors_close,
+		{(const char *[]){"views", "title_bar", "colors", "close", NULL}, config_set_views_title_bar_colors_close,
 				config_get_views_title_bar_colors_close},
-		{(char *[]){"views", "border", "thickness", NULL}, config_set_views_border_thickness,
+		{(const char *[]){"views", "border", "thickness", NULL}, config_set_views_border_thickness,
 				config_get_views_border_thickness},
-		{(char *[]){"views", "border", "colors", "active", NULL}, config_set_views_border_colors_active,
+		{(const char *[]){"views", "border", "colors", "active", NULL}, config_set_views_border_colors_active,
 				config_get_views_border_colors_active},
-		{(char *[]){"views", "border", "colors", "inactive", NULL}, config_set_views_border_colors_inactive,
+		{(const char *[]){"views", "border", "colors", "inactive", NULL}, config_set_views_border_colors_inactive,
 				config_get_views_border_colors_inactive},
 
-		{(char *[]){"monitors", "default_scale", NULL}, config_set_monitors_default_scale,
+		{(const char *[]){"monitors", "default_scale", NULL}, config_set_monitors_default_scale,
 				config_get_monitors_default_scale},
-		{(char *[]){"monitors", "wallpaper", "filepath", NULL}, config_set_monitors_wallpaper_filepath,
+		{(const char *[]){"monitors", "wallpaper", "filepath", NULL}, config_set_monitors_wallpaper_filepath,
 				config_get_monitors_wallpaper_filepath},
-		{(char *[]){"monitors", "wallpaper", "mode", NULL}, config_set_monitors_wallpaper_mode,
+		{(const char *[]){"monitors", "wallpaper", "mode", NULL}, config_set_monitors_wallpaper_mode,
 				config_get_monitors_wallpaper_mode},
 
-		{(char *[]){"tiling", "mode", NULL}, config_set_tiling_mode, config_get_tiling_mode},
-		{(char *[]){"tiling", "gaps", NULL}, config_set_tiling_gaps, config_get_tiling_gaps},
+		{(const char *[]){"tiling", "mode", NULL}, config_set_tiling_mode, config_get_tiling_mode},
+		{(const char *[]){"tiling", "gaps", NULL}, config_set_tiling_gaps, config_get_tiling_gaps},
 };
 
 static int property_path_gather_entry_refs(
@@ -1428,6 +1428,29 @@ err:
 	return -1;
 }
 
+static const struct {
+	const char *pattern;
+	const char **action;
+} default_chords[] = {
+		{"S-Sh-Q", (const char *[]){"terminate", NULL}},
+		{"S-q", (const char *[]){"close", NULL}},
+		{"S-Return", (const char *[]){"spawn", "foot", NULL}},
+		{"S-x S-f", (const char *[]){"spawn", "nautilus", NULL}},
+		{"S-m", (const char *[]){"control", NULL}},
+		{"S-i", (const char *[]){"inc_master", NULL}},
+		{"S-d", (const char *[]){"dec_master", NULL}},
+		{"S-l", (const char *[]){"inc_mfact", NULL}},
+		{"S-h", (const char *[]){"dec_mfact", NULL}},
+		{"S-r", (const char *[]){"toggle_rmaster", NULL}},
+		{"S-n", (const char *[]){"next_workspace", NULL}},
+		{"S-p", (const char *[]){"prev_workspace", NULL}},
+		{"S-w", (const char *[]){"next_view", NULL}},
+		{"S-Sh-w", (const char *[]){"prev_view", NULL}},
+		{"S-s", (const char *[]){"swap_front", NULL}},
+		{"S-Tab", (const char *[]){"switch_app", NULL}},
+		{"S-grave", (const char *[]){"switch_app_instance", NULL}},
+};
+
 int ptychite_config_init(struct ptychite_config *config, struct ptychite_compositor *compositor) {
 	config->compositor = compositor;
 
@@ -1435,29 +1458,6 @@ int ptychite_config_init(struct ptychite_config *config, struct ptychite_composi
 	config->keyboard.repeat.delay = 600;
 	config->keyboard.xkb.options = NULL;
 	wl_array_init(&config->keyboard.chords);
-
-	struct {
-		const char *pattern;
-		const char **action;
-	} default_chords[] = {
-			{"S-Sh-Q", (const char *[]){"terminate", NULL}},
-			{"S-q", (const char *[]){"close", NULL}},
-			{"S-Return", (const char *[]){"spawn", "foot", NULL}},
-			{"S-x S-f", (const char *[]){"spawn", "nautilus", NULL}},
-			{"S-m", (const char *[]){"control", NULL}},
-			{"S-i", (const char *[]){"inc_master", NULL}},
-			{"S-d", (const char *[]){"dec_master", NULL}},
-			{"S-l", (const char *[]){"inc_mfact", NULL}},
-			{"S-h", (const char *[]){"dec_mfact", NULL}},
-			{"S-r", (const char *[]){"toggle_rmaster", NULL}},
-			{"S-n", (const char *[]){"next_workspace", NULL}},
-			{"S-p", (const char *[]){"prev_workspace", NULL}},
-			{"S-w", (const char *[]){"next_view", NULL}},
-			{"S-Sh-w", (const char *[]){"prev_view", NULL}},
-			{"S-s", (const char *[]){"swap_front", NULL}},
-			{"S-Tab", (const char *[]){"switch_app", NULL}},
-			{"S-grave", (const char *[]){"switch_app_instance", NULL}},
-	};
 
 	/* FIXME errors should be const */
 	char *error;
@@ -1708,7 +1708,7 @@ char *ptychite_config_get_property(
 		wl_array_for_each(entry_ref, &entries) {
 			struct json_object *object = output;
 
-			char **token;
+			const char **token;
 			for (token = entry_ref->entry->path + path_l; *(token + 1); token++) {
 				struct json_object *child;
 				if (!json_object_object_get_ex(object, *token, &child)) {
