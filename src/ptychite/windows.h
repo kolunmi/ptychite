@@ -17,7 +17,10 @@ struct ptychite_window {
 	struct wlr_output *output;
 	struct wlr_scene_buffer *scene_buffer;
 	const struct ptychite_window_impl *impl;
+	bool redraw;
+	bool immediate_redraw;
 
+	struct wl_listener frame_done;
 	struct wl_listener destroy;
 };
 

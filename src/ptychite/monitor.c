@@ -174,8 +174,9 @@ void ptychite_monitor_disable(struct ptychite_monitor *monitor) {
 }
 
 static void monitor_handle_frame(struct wl_listener *listener, void *data) {
-	struct ptychite_monitor *monitor = wl_container_of(listener, monitor, frame);
+	struct timespec now;
 
+	struct ptychite_monitor *monitor = wl_container_of(listener, monitor, frame);
 	struct wlr_scene_output *scene_output = wlr_scene_get_scene_output(monitor->server->scene, monitor->output);
 
 	struct ptychite_monitor *monitor_iter;
@@ -198,7 +199,6 @@ static void monitor_handle_frame(struct wl_listener *listener, void *data) {
 
 	wlr_scene_output_commit(scene_output, NULL);
 
-	struct timespec now;
 skip:
 	clock_gettime(CLOCK_MONOTONIC, &now);
 	wlr_scene_output_send_frame_done(scene_output, &now);

@@ -16,49 +16,13 @@ struct ptychite_window *ptychite_element_get_window(struct ptychite_element *ele
 	return window;
 }
 
-static void window_handle_destroy(struct wl_listener *listener, void *data) {
-	struct ptychite_window *window = wl_container_of(listener, window, destroy);
-
-	wl_list_remove(&window->destroy.link);
-
-	if (window->server->hovered_window == window) {
-		window->server->hovered_window = NULL;
-	}
-
-	if (window->impl->destroy) {
-		window->impl->destroy(window);
-	}
-}
-
-int ptychite_window_init(struct ptychite_window *window, struct ptychite_server *server,
-		const struct ptychite_window_impl *impl, struct wlr_scene_tree *parent, struct wlr_output *output) {
-	if (!(window->element.scene_tree = wlr_scene_tree_create(parent))) {
-		return -1;
-	}
-
-	struct wlr_scene_buffer *scene_buffer = wlr_scene_buffer_create(window->element.scene_tree, NULL);
-	if (!scene_buffer) {
-		wlr_scene_node_destroy(&window->element.scene_tree->node);
-		return -1;
-	}
-
-	window->element.type = PTYCHITE_ELEMENT_WINDOW;
-	window->element.scene_tree->node.data = &window->element;
-	window->scene_buffer = scene_buffer;
-	window->server = server;
-	window->impl = impl;
-	window->output = output;
-
-	window->destroy.notify = window_handle_destroy;
-	wl_signal_add(&scene_buffer->node.events.destroy, &window->destroy);
-
-	return 0;
-}
-
-int ptychite_window_relay_draw(struct ptychite_window *window, int width, int height) {
+static int window_redraw_now(struct ptychite_window *window) {
 	if (!window->impl || !window->impl->draw) {
 		return -1;
 	}
+
+	int width = window->element.width;
+	int height = window->element.height;
 
 	float scale = window->output ? window->output->scale : 1.0;
 	int scaled_width = ceil(width * scale);
@@ -120,6 +84,73 @@ err_create_font_options:
 err_create_cairo:
 	cairo_surface_destroy(surface);
 	return -1;
+}
+
+static void window_handle_frame_done(struct wl_listener *listener, void *data) {
+	struct ptychite_window *window = wl_container_of(listener, window, frame_done);
+
+	if (window->redraw) {
+		window_redraw_now(window);
+		window->redraw = false;
+	}
+}
+
+static void window_handle_destroy(struct wl_listener *listener, void *data) {
+	struct ptychite_window *window = wl_container_of(listener, window, destroy);
+
+	wl_list_remove(&window->destroy.link);
+
+	if (window->server->hovered_window == window) {
+		window->server->hovered_window = NULL;
+	}
+
+	if (window->impl->destroy) {
+		window->impl->destroy(window);
+	}
+}
+
+int ptychite_window_init(struct ptychite_window *window, struct ptychite_server *server,
+		const struct ptychite_window_impl *impl, struct wlr_scene_tree *parent, struct wlr_output *output) {
+	if (!(window->element.scene_tree = wlr_scene_tree_create(parent))) {
+		return -1;
+	}
+
+	struct wlr_scene_buffer *scene_buffer = wlr_scene_buffer_create(window->element.scene_tree, NULL);
+	if (!scene_buffer) {
+		wlr_scene_node_destroy(&window->element.scene_tree->node);
+		return -1;
+	}
+
+	window->element.type = PTYCHITE_ELEMENT_WINDOW;
+	window->element.scene_tree->node.data = &window->element;
+	window->scene_buffer = scene_buffer;
+	window->server = server;
+	window->impl = impl;
+	window->output = output;
+	window->immediate_redraw = true;
+
+	window->frame_done.notify = window_handle_frame_done;
+	wl_signal_add(&scene_buffer->events.frame_done, &window->frame_done);
+	window->destroy.notify = window_handle_destroy;
+	wl_signal_add(&scene_buffer->node.events.destroy, &window->destroy);
+
+	return 0;
+}
+
+int ptychite_window_relay_draw(struct ptychite_window *window, int width, int height) {
+	window->element.width = width;
+	window->element.height = height;
+
+	if (window->immediate_redraw) {
+		window->immediate_redraw = false;
+		return window_redraw_now(window);
+	}
+
+	window->redraw = true;
+	if (window->output) {
+		wlr_output_schedule_frame(window->output);
+	}
+	return 0;
 }
 
 void ptychite_window_relay_draw_same_size(struct ptychite_window *window) {
