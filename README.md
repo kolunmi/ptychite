@@ -5,9 +5,7 @@
 # Ptychite
 A flexible, approachable, and powerful wayland compositor. This project is still in its early stages; it's not currently usable as a daily driver, but will be soon!
 
-Note: ptychite is now developed on [codeberg](https://codeberg.org/kolunmi/ptychite).
-
-![screenshot](https://codeberg.org/attachments/24ab0d93-2dfa-4115-82e6-4ac188f76f52 "screenshot")
+![Image](https://github.com/user-attachments/assets/b80ce9bc-9654-43c1-b09b-e1cdc3988d31)
 
 ## Project Goals
 * performant
@@ -114,6 +112,3 @@ A list of all properties to filter through will appear. You will be prompted to 
 * [jq](https://github.com/jqlang/jq) for processing ptymsg output
 * [gum](https://github.com/charmbracelet/gum) for creating the cli
 * [zenity](https://gitlab.gnome.org/GNOME/zenity) for the color picker
-
-## Contributing
-Thank you for your interest in my project!! If you would like to contribute, please [open a pull request](https://codeberg.org/kolunmi/ptychite/pulls) or [file an issue](https://codeberg.org/kolunmi/ptychite/issues).
